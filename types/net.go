@@ -1,4 +1,12 @@
-package net
+package types
+
+type Network struct {
+	Title    string
+	Version  string
+	Endpoint []string
+}
+
+type Address string
 
 var dchain Network = Network{
 	Title:    "DChain",
@@ -38,3 +46,7 @@ func GetNetWork(networkId string) Network {
 	}
 	return result
 }
+
+// func CreateAddress() Address {
+// 	return StringToAddress(utils.randStringBytesMaskImpr(16))
+// }

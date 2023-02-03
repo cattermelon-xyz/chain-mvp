@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/hectagon-finance/chain-mvp/pkg/net"
+	"github.com/hectagon-finance/chain-mvp/types"
 )
 
-func getDChainWho(addr net.Address) net.Who {
-	return net.Who{
-		Network:  net.GetNetWork("DChain"),
+func getDChainWho(addr types.Address) types.Who {
+	return types.Who{
+		Network:  types.GetNetWork("DChain"),
 		Identity: addr,
 	}
 }
@@ -17,7 +17,7 @@ func isDecisioExisted(decisionId string) bool
 func print() {}
 
 // start, return true/false if decision is successfully started
-func start(whoAddr net.Address, decisionId net.Address) bool {
+func start(whoAddr types.Address, decisionId types.Address) bool {
 	// TODO: convert whoAddr to who of this network -> guess this is what cosmos provide
 	// who := getDChainWho(whoAddr)
 	// TODO: check if decision is existed
@@ -25,10 +25,10 @@ func start(whoAddr net.Address, decisionId net.Address) bool {
 }
 
 // stop, return true/false if decision is successfully stopped
-func stop(who net.Address, decisionId net.Address) bool
+func stop(who types.Address, decisionId types.Address) bool
 
 // pause, return true/false if decision is successfully paused
-func pause(who net.Address, decisionId net.Address) bool
+func pause(who types.Address, decisionId types.Address) bool
 
 // resume, return true/false if decision is successfully started
-func resume(who net.Address, decisionId net.Address) bool
+func resume(who types.Address, decisionId types.Address) bool

@@ -14,8 +14,8 @@ Code standard: [Link](https://github.com/golang-standards/project-layout)
 # TODO
 
 - [x] Split cmd/demo into multiple programs
-- [ ] Read and apply cosmos module convention
-- [ ] Add interfaces for pkg
+- [x] Change code structure to fit cosmos module coding recommendation
+- [ ] Implement Observer pattern, NOTE: in the future, this will be replaced with Cosmos events
 
 # Example of voting
 - Weight voting
@@ -30,3 +30,12 @@ Code standard: [Link](https://github.com/golang-standards/project-layout)
 
  NOTE: change Enforcer to Event; the chain should emit an event then some process will listen to it and do some work
 - Should Enforcer be written in the chain config or should it be something else written outside of the chain?
+
+- Project structure
+```
+ - third_party // code copy from someone else placed here
+ - client
+  - cli // exposed command line
+ - types // all types and internal logic goes here
+ - rules // all voting rules defined here
+```

@@ -1,11 +1,7 @@
-// EOA - externally owned account
-
-package net
+package types
 
 import (
 	"fmt"
-
-	"github.com/hectagon-finance/chain-mvp/pkg/datastrct"
 )
 
 type Who struct {
@@ -13,7 +9,7 @@ type Who struct {
 	Identity Address
 }
 
-func (this *Who) vote(tree *datastrct.Tree, option int) {
+func (this *Who) vote(tree *Tree, option int) {
 	isValid := tree.IsValidChoice(option)
 	if !isValid {
 		fmt.Printf("%s vote %d, this is an invalid vote\n", this.Identity, option)

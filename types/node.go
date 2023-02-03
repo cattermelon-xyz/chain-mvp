@@ -1,4 +1,4 @@
-package datastrct
+package types
 
 import (
 	"fmt"
@@ -7,14 +7,27 @@ import (
 )
 
 // voter can choose an option or add few more option thus appending new nodes to the tree
-
+// NOTE: change the name to VotingMachine to reflect the configuration?
 type Ballot interface {
-	vote(*Tree, string, int)
-	name() string
+	Vote(*Tree, string, int)
+	GetName() string
 }
 
+const TallyAtVote = -1
+
+// Record to record the data; Tally to take action from the data; TallyAt return the timestamp to active Tally
+type VotingMachine interface {
+	Record(string, int)
+	Tally(*Tree)
+	TallyAt() int
+}
+
+// NOTE: Record then Tally, instead of Vote!
+
 // system will tally all node in queue
+
 type Tally func(tree *Tree)
+
 type Enforce func(command string) bool
 
 const CHECKPOINT string = "Checkpoint"
@@ -82,7 +95,7 @@ func (this *Node) isValidChoice(idx int) bool {
 	return false
 }
 func (this *Node) vote(tr *Tree, who string, option int) {
-	this.voteObject.vote(tr, who, option)
+	this.voteObject.Vote(tr, who, option)
 }
 
 // func (this *Node) vote(idx int) {

@@ -1,4 +1,4 @@
-package datastrct
+package types
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ func (this *Tree) IsValidChoice(idx int) bool {
 }
 func (this *Tree) Vote(idx int, who string) {
 	if this.IsValidChoice(idx) {
-		fmt.Printf("In %s, with %s, %s vote %d\n", this.Current.Data(), this.Current.voteObject.name(), who, idx)
+		fmt.Printf("In %s, with %s, %s vote %d\n", this.Current.Data(), this.Current.voteObject.GetName(), who, idx)
 		this.Current.vote(this, who, idx)
 	}
 }

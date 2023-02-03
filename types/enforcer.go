@@ -1,4 +1,4 @@
-package event
+package types
 
 var emitted []Event
 

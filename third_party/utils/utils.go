@@ -1,6 +1,8 @@
-package net
+package utils
 
 import "math/rand"
+
+// original post: https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-go
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
@@ -25,8 +27,4 @@ func randStringBytesMaskImpr(n int) string {
 	}
 
 	return string(b)
-}
-
-func CreateAddress() Address {
-	return StringToAddress(randStringBytesMaskImpr(16))
 }

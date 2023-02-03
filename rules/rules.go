@@ -1,4 +1,6 @@
-package datastrct
+package rules
+
+import "github.com/hectagon-finance/chain-mvp/types"
 
 // if an option get more than 3 vote, it will pass
 type ThreeVoteRuleData struct {
@@ -6,14 +8,14 @@ type ThreeVoteRuleData struct {
 	Voted map[int]int
 }
 
-func (this ThreeVoteRuleData) vote(tree *Tree, who string, option int) {
+func (this ThreeVoteRuleData) Vote(tree *types.Tree, who string, option int) {
 	this.Voted[option] += 1
 	if this.Voted[option] >= 3 {
 		tree.Choose(option)
 	}
 }
 
-func (this ThreeVoteRuleData) name() string {
+func (this ThreeVoteRuleData) GetName() string {
 	return this.Name
 }
 
@@ -23,11 +25,11 @@ type FirstConsecutiveVoteRuleData struct {
 	Voted []int
 }
 
-func (this FirstConsecutiveVoteRuleData) name() string {
+func (this FirstConsecutiveVoteRuleData) GetName() string {
 	return this.Name
 }
 
-func (this FirstConsecutiveVoteRuleData) vote(tree *Tree, who string, option int) {
+func (this FirstConsecutiveVoteRuleData) Vote(tree *types.Tree, who string, option int) {
 
 	if option == this.Voted[0] {
 		// fmt.Printf("option : %d, Voted[0]: %d \n", option, this.Voted[0])

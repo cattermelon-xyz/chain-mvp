@@ -1,9 +1,4 @@
-package checkpoint
-
-import (
-	"github.com/hectagon-finance/chain-mvp/pkg/enforcer"
-	"github.com/hectagon-finance/chain-mvp/pkg/net"
-)
+package types
 
 // each CheckPoint should point to the next through an mutable option list
 type CheckPoint struct {
@@ -17,11 +12,11 @@ type CheckPoint struct {
 // voteFunc should define the function and input
 // Q: how to match voteFunc and options?
 type VoteFunc struct {
-	Network net.Network
+	Network Network
 	Address string
 }
 
 type VoteOutput struct {
 	Next     *CheckPoint
-	Enforcer *enforcer.Enforcer
+	Enforcer *Enforcer
 }

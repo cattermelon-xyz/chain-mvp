@@ -1,6 +1,6 @@
 package main
 
-import "github.com/hectagon-finance/chain-mvp/pkg/net"
+import "github.com/hectagon-finance/chain-mvp/types"
 
 // this binary will handle vote function
 // user: organization users
@@ -11,4 +11,4 @@ import "github.com/hectagon-finance/chain-mvp/pkg/net"
 	vote(who *net.Who, decisionId string) bool
 */
 
-func vote(whoAddr net.Address, decisionId net.Address)
+func vote(whoAddr types.Address, decisionId types.Address)
