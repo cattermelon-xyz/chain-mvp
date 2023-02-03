@@ -3,39 +3,25 @@ package main
 import (
 	"fmt"
 
-	"github.com/hectagon-finance/chain-mvp/pkg/checkpoint"
-	"github.com/hectagon-finance/chain-mvp/pkg/decision"
-	"github.com/hectagon-finance/chain-mvp/pkg/enforcer"
-	"github.com/hectagon-finance/chain-mvp/pkg/net"
+	"github.com/hectagon-finance/chain-mvp/pkg/datastrct"
 )
 
 func main() {
-	ETH := net.Network{Title: "ethereum", Version: "london", Endpoint: []string{"e_endpoint1", "e_endpoint2"}}
-	// SOL := Network{"solana", "sealevel", []string{"s_endpoint1", "s_endpoint2"}}
-	disperseContractAddress := "0xDisperseContract"
-	params := []string{"0xFrom", "0xTo"}
+	dRule := datastrct.ThreeVoteRuleData{Voted: make(map[int]int), Name: "d_ThreeVoteRuleData"}
+	cRule := datastrct.FirstConsecutiveVoteRuleData{Voted: []int{-1, -1, -1}, Name: "c_FirstConsecutiveVoteRuleData"}
+	bRule := datastrct.ThreeVoteRuleData{Voted: make(map[int]int), Name: "b_ThreeVoteRuleData"}
+	aRule := datastrct.FirstConsecutiveVoteRuleData{Voted: []int{-1, -1, -1}, Name: "a_FirstConsecutiveVoteRuleData"}
 
-	// checkpoint1 -> checkpoint2 -> enforce
-
-	vote2ContractAddress := "0xVote2"
-	checkpoint2VoteFunc := checkpoint.VoteFunc{Network: ETH, Address: vote2ContractAddress}
-	enforceSendEthToAddress := enforcer.Enforcer{Network: ETH, Address: disperseContractAddress, Params: params}
-	output2 := checkpoint.VoteOutput{Next: nil, Enforcer: &enforceSendEthToAddress}
-	output2s := []checkpoint.VoteOutput{output2}
-
-	checkpoint2 := checkpoint.CheckPoint{
-		Title: "CheckPoint 2", Fulltext: "CheckPoint 2 FullText",
-		Options: &output2s, VoteFunc: &checkpoint2VoteFunc}
-	vote1ContractAddress := "0xVote1"
-	checkpoint1VoteFunc := checkpoint.VoteFunc{Network: ETH, Address: vote1ContractAddress}
-	output1 := checkpoint.VoteOutput{Next: &checkpoint2, Enforcer: nil}
-	output1s := []checkpoint.VoteOutput{output1}
-	checkpoint1 := checkpoint.CheckPoint{
-		Title: "CheckPoint 1", Fulltext: "CheckPoint 1 FullText",
-		Options: &output1s, VoteFunc: &checkpoint1VoteFunc}
-
-	d := decision.Decision{Title: "Decision1", Fulltext: "Fulltext Decision 1",
-		Start: &checkpoint1, Current: nil}
-
-	fmt.Println("Hello World ", d.Title)
+	e, f, g, h, k := datastrct.CreateEmptyNode("e", nil), datastrct.CreateEmptyNode("f", nil), datastrct.CreateEmptyNode("g", nil), datastrct.CreateEmptyNode("h", nil), datastrct.CreateEmptyNode("k", nil)
+	d := datastrct.CreateNodeWithChildren("d", []*datastrct.Node{g, h, k}, dRule)
+	c := datastrct.CreateNodeWithChildren("c", []*datastrct.Node{f}, cRule)
+	b := datastrct.CreateNodeWithChildren("b", []*datastrct.Node{d, e}, bRule)
+	a := datastrct.CreateNodeWithChildren("a", []*datastrct.Node{b, c}, aRule)
+	t := datastrct.CreateTree(a)
+	fmt.Println("Original tree:")
+	t.PrintFromCurrent()
+	t.Vote(0, "alice")
+	t.Vote(0, "bob")
+	t.Vote(1, "caite")
+	t.Vote(1, "david")
 }

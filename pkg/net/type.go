@@ -5,3 +5,5 @@ type Network struct {
 	Version  string
 	Endpoint []string
 }
+
+type Address string
