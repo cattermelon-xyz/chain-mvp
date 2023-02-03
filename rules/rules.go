@@ -2,6 +2,8 @@ package rules
 
 import "github.com/hectagon-finance/chain-mvp/types"
 
+//NOTE: this is not only rule but a VotingMachine with states stored in struct and functions
+
 // if an option get more than 3 vote, it will pass
 type ThreeVoteRuleData struct {
 	Name  string
