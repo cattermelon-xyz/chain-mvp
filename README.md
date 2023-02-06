@@ -15,14 +15,13 @@ This project is the MVP for the new chain. These code focus on the application l
 2. Code convention: [Link](assets/Code.md)
 3. Logic explaination: [Link](assets/Logic.md)
 
-
 ## TODO
 
 - [x] Split cmd/demo into multiple programs
 - [x] Change code structure to fit cosmos module coding recommendation
 - [x] Build document structure
-- [ ] Change `Decision` to `Initiative` to match with business docs 
-- [ ] Implement the CheckPoint and VotingMachine
+- [x] Change `Decision` to `Initiative` to match with business docs
+- [ ] Implement the `CheckPoint` and `VotingMachine`
 - [ ] The chain should emit an `Event` then some process will listen to it and do some work (aka `Enforcer`)
 - [ ] Implement Observer pattern, NOTE: in the future, this will be replaced with Cosmos events
 - [ ] Turn this project into a webserver

@@ -10,7 +10,7 @@ import (
 
 // system will tally all node in queue
 
-type Tally func(tree *Tree)
+type Tally func(tree *Initiative)
 
 type Enforce func(command string) bool
 
@@ -18,11 +18,12 @@ const CHECKPOINT string = "Checkpoint"
 const ENFORCER string = "Enforcer"
 
 type Node struct {
-	name       string
-	enforce    Enforce
-	tally      Tally
-	children   []*Node
-	voteObject Ballot
+	name           string
+	enforce        Enforce
+	tally          Tally
+	children       []*Node
+	voteObject     Ballot
+	activatedEvent Event
 }
 
 // return something that is printable
@@ -44,6 +45,10 @@ func CreateEmptyNode(name string, b Ballot) *Node {
 		name:       name,
 		children:   []*Node{},
 		voteObject: b,
+		activatedEvent: Event{
+			Name: "NodeActivated",
+			Args: []string{name},
+		},
 	}
 	return &node
 }
@@ -52,6 +57,10 @@ func CreateNodeWithChildren(name string, children []*Node, b Ballot) *Node {
 		name:       name,
 		children:   children,
 		voteObject: b,
+		activatedEvent: Event{
+			Name: "NodeActivated",
+			Args: []string{name},
+		},
 	}
 	return &node
 }
@@ -78,7 +87,7 @@ func (this *Node) isValidChoice(idx int) bool {
 	}
 	return false
 }
-func (this *Node) vote(tr *Tree, who string, option int) {
+func (this *Node) vote(tr *Initiative, who string, option int) {
 	this.voteObject.Vote(tr, who, option)
 }
 

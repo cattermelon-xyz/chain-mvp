@@ -1,4 +1,4 @@
-package rules
+package machines
 
 import "github.com/hectagon-finance/chain-mvp/types"
 
@@ -10,7 +10,7 @@ type ThreeVoteRuleData struct {
 	Voted map[int]int
 }
 
-func (this ThreeVoteRuleData) Vote(tree *types.Tree, who string, option int) {
+func (this ThreeVoteRuleData) Vote(tree *types.Initiative, who string, option int) {
 	this.Voted[option] += 1
 	if this.Voted[option] >= 3 {
 		tree.Choose(option)
@@ -31,7 +31,7 @@ func (this FirstConsecutiveVoteRuleData) GetName() string {
 	return this.Name
 }
 
-func (this FirstConsecutiveVoteRuleData) Vote(tree *types.Tree, who string, option int) {
+func (this FirstConsecutiveVoteRuleData) Vote(tree *types.Initiative, who string, option int) {
 
 	if option == this.Voted[0] {
 		// fmt.Printf("option : %d, Voted[0]: %d \n", option, this.Voted[0])
