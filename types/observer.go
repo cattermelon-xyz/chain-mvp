@@ -34,7 +34,7 @@ func Emit(id string) {
 
 func CreateEvent(data Event) (*Event, string) {
 	e := Event{Name: data.Name, Args: data.Args}
-	id := utils.RandStringBytesMaskImpr(8)
+	id := utils.RandString(8)
 	registeredEvent[id] = &e
 	return &e, id
 }
@@ -51,7 +51,7 @@ func Register(eventId string, o Observer) (string, error) {
 	e := registeredEvent[eventId]
 	var oId string
 	if e != nil {
-		oId = utils.RandStringBytesMaskImpr(8)
+		oId = utils.RandString(8)
 		e.observerList[oId] = o
 		o.SetId(oId)
 		return oId, nil

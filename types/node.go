@@ -6,23 +6,10 @@ import (
 	"github.com/hectagon-finance/chain-mvp/third_party/tree"
 )
 
-// NOTE: Record then Tally, instead of Vote!
-
-// system will tally all node in queue
-
-type Tally func(tree *Initiative)
-
-type Enforce func(command string) bool
-
-const CHECKPOINT string = "Checkpoint"
-const ENFORCER string = "Enforcer"
-
 type Node struct {
 	name           string
-	enforce        Enforce
-	tally          Tally
 	children       []*Node
-	voteObject     Ballot
+	voteObject     VotingMachine
 	activatedEvent Event
 }
 
@@ -40,7 +27,7 @@ func (n *Node) Children() (c []tree.Node) {
 	return
 }
 
-func CreateEmptyNode(name string, b Ballot) *Node {
+func CreateEmptyNode(name string, b VotingMachine) *Node {
 	node := Node{
 		name:       name,
 		children:   []*Node{},
@@ -52,7 +39,7 @@ func CreateEmptyNode(name string, b Ballot) *Node {
 	}
 	return &node
 }
-func CreateNodeWithChildren(name string, children []*Node, b Ballot) *Node {
+func CreateNodeWithChildren(name string, children []*Node, b VotingMachine) *Node {
 	node := Node{
 		name:       name,
 		children:   children,
@@ -88,9 +75,13 @@ func (this *Node) isValidChoice(idx int) bool {
 	return false
 }
 func (this *Node) vote(tr *Initiative, who string, option int) {
-	this.voteObject.Vote(tr, who, option)
+	this.voteObject.Record(who, option)
+	if this.voteObject.TallyAt() == -1 {
+		this.voteObject.Tally()
+		tallyResult := this.voteObject.GetTallyResult()
+		fmt.Printf("Tally and the result %d\n", tallyResult)
+		if tallyResult != NoTallyResult {
+			tr.Choose(tallyResult)
+		}
+	}
 }
-
-// func (this *Node) vote(idx int) {
-
-// }

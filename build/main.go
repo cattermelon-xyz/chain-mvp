@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	dRule := machines.ThreeVoteRuleData{Voted: make(map[int]int), Name: "d_ThreeVoteRuleData"}
-	cRule := machines.FirstConsecutiveVoteRuleData{Voted: []int{-1, -1, -1}, Name: "c_FirstConsecutiveVoteRuleData"}
-	bRule := machines.ThreeVoteRuleData{Voted: make(map[int]int), Name: "b_ThreeVoteRuleData"}
-	aRule := machines.FirstConsecutiveVoteRuleData{Voted: []int{-1, -1, -1}, Name: "a_FirstConsecutiveVoteRuleData"}
+	dRule := machines.NewFavorChoice(3)
+	cRule := machines.NewFavorChoice(3)
+	bRule := machines.NewFavorChoice(3)
+	aRule := machines.NewFavorChoice(3)
 
 	e, f, g, h, k := types.CreateEmptyNode("e", nil), types.CreateEmptyNode("f", nil), types.CreateEmptyNode("g", nil), types.CreateEmptyNode("h", nil), types.CreateEmptyNode("k", nil)
 	d := types.CreateNodeWithChildren("d", []*types.Node{g, h, k}, dRule)
@@ -23,11 +23,11 @@ func main() {
 	t.PrintFromCurrent()
 	t.Start()
 	t.Vote(0, "alice")
-	t.Vote(1, "bob")
-	t.Pause()
+	t.Vote(0, "bob")
+	// t.Pause()
 	t.Vote(1, "bob1")
-	t.Vote(1, "caite")
-	t.Resume()
+	t.Vote(0, "caite")
+	// t.Resume()
 	t.Vote(1, "david")
 	t.Vote(1, "erh")
 	t.Vote(0, "felix")

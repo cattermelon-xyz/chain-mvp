@@ -24,7 +24,7 @@ type Initiative struct {
 var initiatives = make(map[string]*Initiative)
 
 func CreateInitiative(title string, fulltext string, start *Node) (*Initiative, string) {
-	id := utils.RandStringBytesMaskImpr(16)
+	id := utils.RandString(16)
 	i := Initiative{
 		id:          id,
 		Title:       title,
@@ -97,6 +97,10 @@ func (this *Initiative) PrintFromCurrent() {
 		tree.Print(this.Current)
 	}
 }
+
+/**
+* TODO: Beside moving to the NextNode, should init something in the nextNode with result from the last Node
+**/
 func (this *Initiative) Choose(idx int) {
 	nextNode := this.Current.Get(idx)
 	if nextNode == nil {
@@ -117,7 +121,7 @@ func (this *Initiative) Vote(idx int, who string) {
 		return
 	}
 	if this.IsValidChoice(idx) {
-		fmt.Printf("In %s, with %s, %s vote %d\n", this.Current.Data(), this.Current.voteObject.GetName(), who, idx)
+		fmt.Printf("In %s, with %s, %s vote %d\n", this.Current.Data(), this.Current.voteObject.Desc(), who, idx)
 		this.Current.vote(this, who, idx)
 	}
 }

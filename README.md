@@ -21,9 +21,20 @@ This project is the MVP for the new chain. These code focus on the application l
 - [x] Change code structure to fit cosmos module coding recommendation
 - [x] Build document structure
 - [x] Change `Decision` to `Initiative` to match with business docs
-- [ ] Implement the `CheckPoint` and `VotingMachine`
-- [ ] The chain should emit an `Event` then some process will listen to it and do some work (aka `Enforcer`)
-- [ ] Implement Observer pattern, NOTE: in the future, this will be replaced with Cosmos events
-- [ ] Turn this project into a webserver
-- [ ] Build web UI for initiative designer
-- [ ] Build web UI for voter
+- [x] Implement the `CheckPoint` and `VotingMachine`
+- [x] Implement Cobra to build `htg` and `htg-client`
+- [ ] When a Tree travel to a new node, should call a hook with arguments as results from the last node voting. Possibly change VotingMachine{} and Node{} to match changes
+- [ ] The chain should emit an `Event`, this should reflect in the VotingMachine{}
+- [ ] Implement UpVote
+- [ ] Implement Polling
+- [ ] Implement client commandline
+- [ ] Demo ready
+- [ ] Implement VetoVote
+- [ ] Implement RankChoiceVote
+- [ ] Implement SingleChoiceVote
+- [ ] Define `proto` strategy how to use proto efficiently without absusing and lost project compartment chracteristic
+- [ ] Implement `proto` to replace `struct` definition and json file
+- [ ] Implement Observer pattern (this is a mechanism for `Enforcer` to hook up with `Event`) with a caution on memory leak & bloats on chain data, NOTE: in the future, this will be replaced with Cosmos events
+- [ ] Implement server api call to match with all client call
+- [ ] Integrate Web UI
+- [ ] Website support MetaMask and Phantom to use ETH, BSC, Solana address to interact with the chain
