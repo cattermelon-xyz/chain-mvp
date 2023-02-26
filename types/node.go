@@ -9,7 +9,7 @@ import (
 type Node struct {
 	name           string
 	children       []*Node
-	voteObject     VotingMachine
+	voteMachine    VotingMachine
 	activatedEvent Event
 }
 
@@ -29,9 +29,9 @@ func (n *Node) Children() (c []tree.Node) {
 
 func CreateEmptyNode(name string, b VotingMachine) *Node {
 	node := Node{
-		name:       name,
-		children:   []*Node{},
-		voteObject: b,
+		name:        name,
+		children:    []*Node{},
+		voteMachine: b,
 		activatedEvent: Event{
 			Name: "NodeActivated",
 			Args: []string{name},
@@ -41,9 +41,9 @@ func CreateEmptyNode(name string, b VotingMachine) *Node {
 }
 func CreateNodeWithChildren(name string, children []*Node, b VotingMachine) *Node {
 	node := Node{
-		name:       name,
-		children:   children,
-		voteObject: b,
+		name:        name,
+		children:    children,
+		voteMachine: b,
 		activatedEvent: Event{
 			Name: "NodeActivated",
 			Args: []string{name},
@@ -62,26 +62,56 @@ func (this *Node) print() {
 	}
 	fmt.Printf("\n")
 }
-func (this *Node) Get(idx int) *Node {
-	if idx < len(this.children) {
+func (this *Node) Get(idx uint64) *Node {
+	if idx < uint64(len(this.children)) {
 		return this.children[idx]
 	}
 	return nil
 }
-func (this *Node) isValidChoice(idx int) bool {
-	if idx < len(this.children) {
-		return true
-	}
-	return false
+func (this *Node) Start(lastTalliedResult []byte) bool {
+	return this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)))
 }
-func (this *Node) vote(tr *Initiative, who string, option int) {
-	this.voteObject.Record(who, option)
-	if this.voteObject.TallyAt() == -1 {
-		this.voteObject.Tally()
-		tallyResult := this.voteObject.GetTallyResult()
-		fmt.Printf("Tally and the result %d\n", tallyResult)
-		if tallyResult != NoTallyResult {
-			tr.Choose(tallyResult)
+func (this *Node) isValidChoice(option interface{}) bool {
+	if this.voteMachine.IsStarted() == false {
+		return false
+	}
+	return this.voteMachine.ValidateVote(option)
+}
+
+/**
+* Function vote
+* Params: tr *Initiative, who string, option interface{}
+* Returns: voteRecordedSucceed bool, talliedSucceed bool, newNodeStartedSucceed bool
+ */
+func (this *Node) vote(tr *Initiative, who string, option interface{}) (bool, bool, bool) {
+	isRecored := this.voteMachine.Record(who, option)
+	if isRecored == true {
+		fmt.Println("Vote is recorded")
+	} else {
+		fmt.Println("Vote record failed")
+		return false, false, false
+	}
+	if this.voteMachine.TallyAt() == TallyAtVote {
+		currentBlockNumber := GetCurrentBlockNumber()
+		isTallied := this.voteMachine.Tally(currentBlockNumber)
+		if isTallied == true {
+			tallyResult, option := this.voteMachine.GetTallyResult()
+			fmt.Printf("Tally and the new option is %d\n", option)
+			if option != NoOptionMade {
+				tr.Choose(option)
+				newNodeStarted := tr.Current.Start(tallyResult)
+				if newNodeStarted == true {
+					fmt.Println("New node started")
+					return true, true, true
+				} else {
+					fmt.Println("New node not started")
+					return true, true, false
+				}
+			}
+		} else {
+			fmt.Println("Tally falied")
+			return true, false, false
 		}
 	}
+	return true, false, false
 }

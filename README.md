@@ -23,7 +23,7 @@ This project is the MVP for the new chain. These code focus on the application l
 - [x] Change `Decision` to `Initiative` to match with business docs
 - [x] Implement the `CheckPoint` and `VotingMachine`
 - [x] Implement Cobra to build `htg` and `htg-client`
-- [ ] When a Tree travel to a new node, should call a hook with arguments as results from the last node voting. Possibly change VotingMachine{} and Node{} to match changes
+- [x] When a Tree travel to a new node, should call a hook with arguments as results from the last node voting. Possibly change VotingMachine{} and Node{} to match changes
 - [ ] The chain should emit an `Event`, this should reflect in the VotingMachine{}
 - [ ] Implement UpVote
 - [ ] Implement Polling

@@ -63,6 +63,7 @@ func (this *Initiative) Start() {
 		this.isStarted = true
 		this.isActivated = true
 		this.Current = this.StartNode
+		this.Current.Start(nil)
 	}
 }
 
@@ -101,7 +102,7 @@ func (this *Initiative) PrintFromCurrent() {
 /**
 * TODO: Beside moving to the NextNode, should init something in the nextNode with result from the last Node
 **/
-func (this *Initiative) Choose(idx int) {
+func (this *Initiative) Choose(idx uint64) {
 	nextNode := this.Current.Get(idx)
 	if nextNode == nil {
 		fmt.Println(idx, " out of bound, no move")
@@ -113,15 +114,22 @@ func (this *Initiative) Choose(idx int) {
 	}
 	// emit Event
 }
-func (this *Initiative) IsValidChoice(idx int) bool {
-	return this.Current.isValidChoice(idx)
+func (this *Initiative) IsValidChoice(option interface{}) bool {
+	return this.Current.isValidChoice(option)
 }
-func (this *Initiative) Vote(idx int, who string) {
+
+/**
+* Function Vote
+* Params: option interface{}, who string
+* Returns: voteRecordedSucceed bool, talliedSucceed bool, newNodeStartedSucceed bool
+ */
+func (this *Initiative) Vote(option interface{}, who string) (bool, bool, bool) {
 	if !this.isActivated {
-		return
+		return false, false, false
 	}
-	if this.IsValidChoice(idx) {
-		fmt.Printf("In %s, with %s, %s vote %d\n", this.Current.Data(), this.Current.voteObject.Desc(), who, idx)
-		this.Current.vote(this, who, idx)
+	if this.IsValidChoice(option) {
+		fmt.Printf("In %s, with %s, %s vote %s\n", this.Current.Data(), this.Current.voteMachine.Desc(), who, option)
+		return this.Current.vote(this, who, option)
 	}
+	return false, false, false
 }

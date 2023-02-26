@@ -48,13 +48,44 @@ There are 2 main users of the app: `initiative designer` is one who design the a
   
   - A `VotingMachine` defines when it should `Tally()` the vote result by its `TallyAt() timestamp`. If `TallyAt()` return `const TallyAfterVote` then `Tally()` will be executed after every vote, else it will execute once the timestamp is reached:
 
-  ```go
-    if Initiative.Current().IsTallied() == false && 
-    Initiative.Current().TallyAt() >= Block.timestamp 
-    { 
-      Initiative.Current().Tally()
-      Remove Initiative from the List 
-    }
+  ```mermaid
+    sequenceDiagram
+    rect rgb(255,255,255)
+    Initiative ->>+ CurrentNode: fnc Vote(who string, option interface{})
+    CurrentNode ->>+ VotingMachine: fnc Record(who string, option interface{})
+    VotingMachine ->>- CurrentNode: bool_RecordSuccess
+    alt RecordSuccess == true
+    CurrentNode ->>+ VotingMachine: fnc TallyAt()
+        VotingMachine ->>- CurrentNode: int_TallyAtVote (-1) or Future Block (>0)
+        alt TallyAt() == TallyAtVote
+            CurrentNode ->>+ VotingMachine: fnc Tally()
+            VotingMachine ->>- CurrentNode: bool_isTallied
+            alt isTallied == true
+            rect rgb(100, 150, 150, .1)
+            CurrentNode ->>+ VotingMachine: fnc GetTallyResult()
+            VotingMachine ->>- CurrentNode: TallyResult []byte, option int
+            %% how to choose from TallyResult []byte ???
+            CurrentNode ->> Initiative: fnc Choose(option int)
+            Initiative ->>+ NextNode: func Start(TallyResult []byte)
+            end
+            NextNode ->>- Initiative: bool_isStarted
+                alt isStarted == false
+                    NextNode ->> Initiative: Vote Succeed, Tally Succeed but NextNode not Started
+                else isStarted == true
+                    NextNode ->> Initiative: Vote Succeed, Tally Succeed but NextNode Started
+                end
+            
+            else isTallied == false
+                CurrentNode ->> Initiative: Vote Succeed, Tally Failed
+            end
+        else
+            CurrentNode ->> Initiative: Record Succeed, No Tally
+        end
+    else RecordSuccess == false
+        CurrentNode ->>- Initiative: Record Failed
+    end
+  end
+
   ```
 
   - `VotingMachine.IsTallied() bool` return whether the VotingMachine already tally its voting result. This function ensure vote result can be re-tally if there is something wrong with the timestamp. NOTE: how Cosmos handle time and timestamp?
