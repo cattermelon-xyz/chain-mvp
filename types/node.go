@@ -7,10 +7,9 @@ import (
 )
 
 type Node struct {
-	name           string
-	children       []*Node
-	voteMachine    VotingMachine
-	activatedEvent Event
+	name        string
+	children    []*Node
+	voteMachine VotingMachine
 }
 
 // return something that is printable
@@ -32,10 +31,6 @@ func CreateEmptyNode(name string, b VotingMachine) *Node {
 		name:        name,
 		children:    []*Node{},
 		voteMachine: b,
-		activatedEvent: Event{
-			Name: "NodeActivated",
-			Args: []string{name},
-		},
 	}
 	return &node
 }
@@ -44,10 +39,6 @@ func CreateNodeWithChildren(name string, children []*Node, b VotingMachine) *Nod
 		name:        name,
 		children:    children,
 		voteMachine: b,
-		activatedEvent: Event{
-			Name: "NodeActivated",
-			Args: []string{name},
-		},
 	}
 	return &node
 }
@@ -87,6 +78,8 @@ func (this *Node) vote(tr *Initiative, who string, option interface{}) (bool, bo
 	isRecored := this.voteMachine.Record(who, option)
 	if isRecored == true {
 		fmt.Println("Vote is recorded")
+		_, evId := CreateEvent("VoteRecorded", nil)
+		Emit(evId)
 	} else {
 		fmt.Println("Vote record failed")
 		return false, false, false

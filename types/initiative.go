@@ -58,13 +58,19 @@ func DeleteInitivate(id string) bool {
 // 	return false
 // }
 
-func (this *Initiative) Start() {
+func (this *Initiative) Start() bool {
 	if this.isStarted == false {
-		this.isStarted = true
-		this.isActivated = true
-		this.Current = this.StartNode
-		this.Current.Start(nil)
+		nodeStarted := this.StartNode.Start(nil)
+		if nodeStarted == false {
+			fmt.Println("Initiative cannot start")
+		}else{
+			this.isStarted = true
+			this.isActivated = true
+			this.Current = this.StartNode
+			fmt.Println("Initiative started successfully")
+		}
 	}
+	return this.isStarted
 }
 
 func (this *Initiative) Stop() {

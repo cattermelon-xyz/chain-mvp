@@ -9,18 +9,22 @@ import (
 var registeredEvent = make(map[string]*Event)
 
 type Observer interface {
-	Update([]string)
+	Update([]byte)
 	GetId() string
 	SetId(string)
 }
 
 type Event struct {
 	Name         string
-	Args         []string
+	Args         []byte
 	observerList map[string]Observer
 }
 
-// Emit event and notify all its Observer
+/**
+* Emit(id string)
+*	Emit event and notify all its Observer and Clear the Event from memory
+* Params: id string
+ */
 func Emit(id string) {
 	e := registeredEvent[id]
 	if e != nil {
@@ -29,11 +33,13 @@ func Emit(id string) {
 				o.Update(e.Args)
 			}
 		}
+		// rpc should do something here
+		delete(registeredEvent, id)
 	}
 }
 
-func CreateEvent(data Event) (*Event, string) {
-	e := Event{Name: data.Name, Args: data.Args}
+func CreateEvent(name string, args []byte) (*Event, string) {
+	e := Event{Name: name, Args: args}
 	id := utils.RandString(8)
 	registeredEvent[id] = &e
 	return &e, id

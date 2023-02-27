@@ -3,7 +3,7 @@
 This project is the MVP for the new chain. These code focus on the application logic and try to deliver a `test-net` by the end of `May 2023`. This project do not focus on the production blockchain. A high level docs can be found [here](https://hectagondao.notion.site/D-Chain-Design-a7f071f3e7514191be453852a5675699)
 <hr>
 
-## Milestones:
+## Milestones
 
 1. Through `main.go`, you can express the workflow of building, managing and using of an `Initiative`. *Expected: end of Feb 2023*
 2. Using a web interface, user can interactive with a go lang `web-server` to build, manage and use an `Initiative`. `Note:` using same tech stack with `cosmos` module to make the transition between phases easier. *Expected: end of Mar 2023*
@@ -24,7 +24,11 @@ This project is the MVP for the new chain. These code focus on the application l
 - [x] Implement the `CheckPoint` and `VotingMachine`
 - [x] Implement Cobra to build `htg` and `htg-client`
 - [x] When a Tree travel to a new node, should call a hook with arguments as results from the last node voting. Possibly change VotingMachine{} and Node{} to match changes
-- [ ] The chain should emit an `Event`, this should reflect in the VotingMachine{}
+- [ ] Implement a mock API server
+- [ ] Implement a mock WebSocket server
+- [ ] Implement a mock Concensus goroutine to produce new Block
+- [ ] Integrate all mock goroutines
+- [ ] The chain should emit an `Event`, this should reflect in the VotingMachine{} and be able to connect to outside with WebSocket
 - [ ] Implement UpVote
 - [ ] Implement Polling
 - [ ] Implement client commandline
