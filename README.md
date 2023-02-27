@@ -24,13 +24,12 @@ This project is the MVP for the new chain. These code focus on the application l
 - [x] Implement the `CheckPoint` and `VotingMachine`
 - [x] Implement Cobra to build `htg` and `htg-client`
 - [x] When a Tree travel to a new node, should call a hook with arguments as results from the last node voting. Possibly change VotingMachine{} and Node{} to match changes
-- [ ] Implement a mock API server
-- [ ] Implement a mock WebSocket server
-- [ ] Implement a mock Concensus goroutine to produce new Block
-- [ ] Integrate all mock goroutines
-- [ ] The chain should emit an `Event`, this should reflect in the VotingMachine{} and be able to connect to outside with WebSocket
-- [ ] Implement UpVote
-- [ ] Implement Polling
+- [x] Implement a mock API server
+- [x] Implement a mock WebSocket server
+- [x] Implement a mock Concensus goroutine to produce new Block
+- [x] Integrate all mock goroutines
+- [x] The chain should emit `Event`, this should reflect in the VotingMachine{} and be able to connect to outside with WebSocket
+- [ ] Implement Polling, note that UpVote is just a special case of Polling
 - [ ] Implement client commandline
 - [ ] Demo ready
 - [ ] Implement VetoVote

@@ -63,7 +63,7 @@ func (this *Initiative) Start() bool {
 		nodeStarted := this.StartNode.Start(nil)
 		if nodeStarted == false {
 			fmt.Println("Initiative cannot start")
-		}else{
+		} else {
 			this.isStarted = true
 			this.isActivated = true
 			this.Current = this.StartNode
@@ -114,7 +114,7 @@ func (this *Initiative) Choose(idx uint64) {
 		fmt.Println(idx, " out of bound, no move")
 	}
 	if nextNode != nil {
-		fmt.Printf("from %s choose: %d got %s\n", this.Current.name, idx, nextNode.name)
+		fmt.Printf("from %s choose: %d got %s\n", this.Current.Title, idx, nextNode.Title)
 		this.Current = nextNode
 		this.PrintFromCurrent()
 	}

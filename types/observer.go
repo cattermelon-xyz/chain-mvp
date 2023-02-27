@@ -6,6 +6,13 @@ import (
 	"github.com/hectagon-finance/chain-mvp/third_party/utils"
 )
 
+type EventData struct {
+	Name string
+	Args []byte
+}
+
+var Broadcast = make(chan EventData) // channel to broadcast data
+
 var registeredEvent = make(map[string]*Event)
 
 type Observer interface {
@@ -33,7 +40,11 @@ func Emit(id string) {
 				o.Update(e.Args)
 			}
 		}
-		// rpc should do something here
+		// fmt.Println("Emit ", id)
+		Broadcast <- EventData{
+			Name: e.Name,
+			Args: e.Args,
+		}
 		delete(registeredEvent, id)
 	}
 }

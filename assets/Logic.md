@@ -47,6 +47,7 @@ There are 2 main users of the app: `initiative designer` is one who design the a
   ```
   
   - A `VotingMachine` defines when it should `Tally()` the vote result by its `TallyAt() timestamp`. If `TallyAt()` return `const TallyAfterVote` then `Tally()` will be executed after every vote, else it will execute once the timestamp is reached:
+// TODO: update this with Event.emit and current logic
 
   ```mermaid
     sequenceDiagram

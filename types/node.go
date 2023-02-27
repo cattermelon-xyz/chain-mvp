@@ -7,16 +7,18 @@ import (
 )
 
 type Node struct {
-	name        string
+	Title       string
+	Description string
 	children    []*Node
 	voteMachine VotingMachine
 }
 
 // return something that is printable
 func (n *Node) Data() interface{} {
-	return n.name
+	return n.Title
 }
 
+// TODO: if voteMachine cannot Tally a result, then what should happen?
 // cannot return n.children directly.
 // https://github.com/golang/go/wiki/InterfaceSlice
 func (n *Node) Children() (c []tree.Node) {
@@ -26,17 +28,19 @@ func (n *Node) Children() (c []tree.Node) {
 	return
 }
 
-func CreateEmptyNode(name string, b VotingMachine) *Node {
+func CreateEmptyNode(title string, desc string, b VotingMachine) *Node {
 	node := Node{
-		name:        name,
+		Title:       title,
+		Description: desc,
 		children:    []*Node{},
 		voteMachine: b,
 	}
 	return &node
 }
-func CreateNodeWithChildren(name string, children []*Node, b VotingMachine) *Node {
+func CreateNodeWithChildren(name string, desc string, children []*Node, b VotingMachine) *Node {
 	node := Node{
-		name:        name,
+		Title:       name,
+		Description: desc,
 		children:    children,
 		voteMachine: b,
 	}
@@ -46,10 +50,15 @@ func (this *Node) Attach(child *Node) *Node {
 	this.children = append(this.children, child)
 	return child
 }
-func (this *Node) print() {
-	fmt.Printf("%s has following children:\n", this.name)
+
+/**
+* Conversational text the describe the current state of the Node
+* including: Title, Description, Options, How voting will conduct
+**/
+func (this *Node) Print() {
+	fmt.Printf("%s\n%s\nVoting Mechanism:\n%s\n", this.Title, this.Description, this.voteMachine.Desc())
 	for i := range this.children {
-		fmt.Printf("- opt %d: %s\n", i, this.children[i].name)
+		fmt.Printf("- opt %d: %s\n", i, this.children[i].Title)
 	}
 	fmt.Printf("\n")
 }
@@ -60,7 +69,8 @@ func (this *Node) Get(idx uint64) *Node {
 	return nil
 }
 func (this *Node) Start(lastTalliedResult []byte) bool {
-	return this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)))
+	currentBlockNumber := GetCurrentBlockNumber()
+	return this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)), currentBlockNumber)
 }
 func (this *Node) isValidChoice(option interface{}) bool {
 	if this.voteMachine.IsStarted() == false {
@@ -84,7 +94,7 @@ func (this *Node) vote(tr *Initiative, who string, option interface{}) (bool, bo
 		fmt.Println("Vote record failed")
 		return false, false, false
 	}
-	if this.voteMachine.TallyAt() == TallyAtVote {
+	if this.voteMachine.ShouldTally() == true {
 		currentBlockNumber := GetCurrentBlockNumber()
 		isTallied := this.voteMachine.Tally(currentBlockNumber)
 		if isTallied == true {
@@ -102,8 +112,14 @@ func (this *Node) vote(tr *Initiative, who string, option interface{}) (bool, bo
 				}
 			}
 		} else {
-			fmt.Println("Tally falied")
+			fmt.Println("Tally failed")
 			return true, false, false
+		}
+	} else {
+		lastTalliedBlockNo := this.voteMachine.GetLastTalliedBlock()
+		_, option := this.voteMachine.GetTallyResult()
+		if lastTalliedBlockNo != NeverBeenTallied && option == NoOptionMade {
+			// TODO: if voteMachine cannot Tally a result, then what should happen?
 		}
 	}
 	return true, false, false

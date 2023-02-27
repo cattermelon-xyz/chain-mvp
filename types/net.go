@@ -47,10 +47,6 @@ func GetNetWork(networkId string) Network {
 	return result
 }
 
-func GetCurrentBlockNumber() uint64 {
-	return 100
-}
-
 // func CreateAddress() Address {
 // 	return StringToAddress(utils.randStringBytesMaskImpr(16))
 // }

@@ -11,6 +11,7 @@ type Ballot interface {
 
 const TallyAtVote = math.MaxUint64
 const NoOptionMade = math.MaxUint64
+const NeverBeenTallied = math.MaxUint64
 
 /*
 * Record to record the data; Tally to take action from the data; TallyAt return the timestamp to active Tally
@@ -28,14 +29,14 @@ type VotingMachine interface {
 	Cost(who string, option interface{}) uint64
 	// Tally the vote, return if tally happen successfully
 	Tally(blockNumber uint64) bool
-	// When to tally the vote; if TallyAt() != TallyAtVote then it can only tally ONCE
-	TallyAt() uint64
+	// Return true if VotingMachine beable to tally
+	ShouldTally() bool
 	// Return the last tallied block
 	GetLastTalliedBlock() uint64
 	// Return the Tally result, return nil []byte and NoOptionMade code if no option made.
 	GetTallyResult() ([]byte, uint64)
 	// After this, the machine is ready for vote. Return if Start succeed
-	Start(tallyResult []byte, noOfOptions uint64) bool
+	Start(tallyResult []byte, noOfOptions uint64, startedBlock uint64) bool
 	// Return the Readiness of the VotingMachine
 	IsStarted() bool
 }

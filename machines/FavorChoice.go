@@ -18,16 +18,20 @@ type FavorChoice struct {
 	lastVotedOpt       uint64
 	isStarted          bool
 	lastTalliedBlockNo uint64
+	startedBlock       uint64
+	votingLength       uint64
 }
 
 func NewFavorChoice(threshold uint64) *FavorChoice {
 	return &FavorChoice{
-		Threshold:      threshold,
-		voted:          make(map[uint64]uint64),
-		records:        make(map[string]bool),
-		selectedOption: types.NoOptionMade,
-		isStarted:      false,
-		noOfOption:     0,
+		Threshold:          threshold,
+		voted:              make(map[uint64]uint64),
+		records:            make(map[string]bool),
+		selectedOption:     types.NoOptionMade,
+		isStarted:          false,
+		noOfOption:         0,
+		votingLength:       100,
+		lastTalliedBlockNo: types.NeverBeenTallied,
 	}
 }
 
@@ -66,15 +70,19 @@ func (this *FavorChoice) Tally(lastTalliedBlockNo uint64) bool {
 	return true
 }
 
-func (this *FavorChoice) TallyAt() uint64 {
-	return types.TallyAtVote
+func (this *FavorChoice) ShouldTally() bool {
+	currentBlockNo := types.GetCurrentBlockNumber()
+	if this.votingLength > currentBlockNo-this.startedBlock {
+		return true
+	}
+	return false
 }
 
 func (this *FavorChoice) GetTallyResult() ([]byte, uint64) {
 	return nil, this.selectedOption
 }
 
-func (this *FavorChoice) Start(lastResult []byte, noOfOption uint64) bool {
+func (this *FavorChoice) Start(lastResult []byte, noOfOption uint64, startedBlock uint64) bool {
 	if this.isStarted == true {
 		fmt.Println("FavorChoice already started!")
 		return false
@@ -91,6 +99,7 @@ func (this *FavorChoice) Start(lastResult []byte, noOfOption uint64) bool {
 	} else {
 		this.noOfOption = noOfOption
 		this.isStarted = true
+		this.startedBlock = startedBlock
 		return true
 	}
 }
