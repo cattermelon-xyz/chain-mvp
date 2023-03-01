@@ -5,7 +5,7 @@ import "math"
 // voter can choose an option or add few more option thus appending new nodes to the tree
 // NOTE: change the name to VotingMachine to reflect the configuration?
 type Ballot interface {
-	Vote(*Initiative, string, int)
+	Vote(*Mission, string, int)
 	GetName() string
 }
 
@@ -36,7 +36,7 @@ type VotingMachine interface {
 	// Return the Tally result, return nil []byte and NoOptionMade code if no option made.
 	GetTallyResult() ([]byte, uint64)
 	// After this, the machine is ready for vote. Return if Start succeed
-	Start(tallyResult []byte, noOfOptions uint64, startedBlock uint64) bool
+	Start(tallyResult []byte, noOfOptions uint64, startedBlock uint64, fallbackOption uint64) bool
 	// Return the Readiness of the VotingMachine
 	IsStarted() bool
 }

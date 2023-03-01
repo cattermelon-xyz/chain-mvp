@@ -5,8 +5,8 @@ This project is the MVP for the new chain. These code focus on the application l
 
 ## Milestones
 
-1. Through `main.go`, you can express the workflow of building, managing and using of an `Initiative`. *Expected: end of Feb 2023*
-2. Using a web interface, user can interactive with a go lang `web-server` to build, manage and use an `Initiative`. `Note:` using same tech stack with `cosmos` module to make the transition between phases easier. *Expected: end of Mar 2023*
+1. Through `main.go`, you can express the workflow of building, managing and using of an `Mission`. *Expected: end of Feb 2023*
+2. Using a web interface, user can interactive with a go lang `web-server` to build, manage and use an `Mission`. `Note:` using same tech stack with `cosmos` module to make the transition between phases easier. *Expected: end of Mar 2023*
 3. Decentralize the `web-server` with `cosmos-sdk`. *Expected: end of May 2023*
 
 ## Documents
@@ -20,7 +20,7 @@ This project is the MVP for the new chain. These code focus on the application l
 - [x] Split cmd/demo into multiple programs
 - [x] Change code structure to fit cosmos module coding recommendation
 - [x] Build document structure
-- [x] Change `Decision` to `Initiative` to match with business docs
+- [x] Change `Decision` to `Mission` to match with business docs
 - [x] Implement the `CheckPoint` and `VotingMachine`
 - [x] Implement Cobra to build `htg` and `htg-client`
 - [x] When a Tree travel to a new node, should call a hook with arguments as results from the last node voting. Possibly change VotingMachine{} and Node{} to match changes

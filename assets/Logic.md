@@ -2,9 +2,9 @@
 
 ## Usecases
 
-There are 2 main users of the app: `initiative designer` is one who design the all checkpoints, events and their enforcers. `voter` is the one who make decision hence trigger the `initiative` to function.
+There are 2 main users of the app: `Mission designer` is one who design the all checkpoints, events and their enforcers. `voter` is the one who make decision hence trigger the `Mission` to function.
 
-### Initiative Designer
+### Mission Designer
 
 - Create
 - Update
@@ -20,7 +20,7 @@ There are 2 main users of the app: `initiative designer` is one who design the a
 
 ## Design Logic
 
-- An `Intitative` is a tree of `Node`; each node has an `Event` and/or a `Checkpoint`. `Event` will be emitted once the node is become the `Current` node of the tree.
+- An `Mission` is a tree of `Node`; each node has an `Event` and/or a `Checkpoint`. `Event` will be emitted once the node is become the `Current` node of the tree.
 - `CheckPoint` help `Intiative` travel between `Node`
 - `VotingMachine`
   - A `Checkpoint` has a `VotingMachine` which has its own logic and store its own data. The `VotingMachine`.`record()` will be called upon a `Who`.`vote()`.
@@ -52,7 +52,7 @@ There are 2 main users of the app: `initiative designer` is one who design the a
   ```mermaid
     sequenceDiagram
     rect rgb(255,255,255)
-    Initiative ->>+ CurrentNode: fnc Vote(who string, option interface{})
+    Mission ->>+ CurrentNode: fnc Vote(who string, option interface{})
     CurrentNode ->>+ VotingMachine: fnc Record(who string, option interface{})
     VotingMachine ->>- CurrentNode: bool_RecordSuccess
     alt RecordSuccess == true
@@ -66,24 +66,24 @@ There are 2 main users of the app: `initiative designer` is one who design the a
             CurrentNode ->>+ VotingMachine: fnc GetTallyResult()
             VotingMachine ->>- CurrentNode: TallyResult []byte, option int
             %% how to choose from TallyResult []byte ???
-            CurrentNode ->> Initiative: fnc Choose(option int)
-            Initiative ->>+ NextNode: func Start(TallyResult []byte)
+            CurrentNode ->> Mission: fnc Choose(option int)
+            Mission ->>+ NextNode: func Start(TallyResult []byte)
             end
-            NextNode ->>- Initiative: bool_isStarted
+            NextNode ->>- Mission: bool_isStarted
                 alt isStarted == false
-                    NextNode ->> Initiative: Vote Succeed, Tally Succeed but NextNode not Started
+                    NextNode ->> Mission: Vote Succeed, Tally Succeed but NextNode not Started
                 else isStarted == true
-                    NextNode ->> Initiative: Vote Succeed, Tally Succeed but NextNode Started
+                    NextNode ->> Mission: Vote Succeed, Tally Succeed but NextNode Started
                 end
             
             else isTallied == false
-                CurrentNode ->> Initiative: Vote Succeed, Tally Failed
+                CurrentNode ->> Mission: Vote Succeed, Tally Failed
             end
         else
-            CurrentNode ->> Initiative: Record Succeed, No Tally
+            CurrentNode ->> Mission: Record Succeed, No Tally
         end
     else RecordSuccess == false
-        CurrentNode ->>- Initiative: Record Failed
+        CurrentNode ->>- Mission: Record Failed
     end
   end
 

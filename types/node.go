@@ -2,13 +2,18 @@ package types
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/hectagon-finance/chain-mvp/third_party/tree"
 )
 
+const NoFallbackOption = math.MaxUint64 - 1
+const EndOfMission = math.MaxUint64 - 2
+
 type Node struct {
 	Title       string
 	Description string
+	FallbackId  uint64
 	children    []*Node
 	voteMachine VotingMachine
 }
@@ -34,13 +39,15 @@ func CreateEmptyNode(title string, desc string, b VotingMachine) *Node {
 		Description: desc,
 		children:    []*Node{},
 		voteMachine: b,
+		FallbackId:  NoFallbackOption,
 	}
 	return &node
 }
-func CreateNodeWithChildren(name string, desc string, children []*Node, b VotingMachine) *Node {
+func CreateNodeWithChildren(name string, desc string, children []*Node, b VotingMachine, fallbackId uint64) *Node {
 	node := Node{
 		Title:       name,
 		Description: desc,
+		FallbackId:  fallbackId,
 		children:    children,
 		voteMachine: b,
 	}
@@ -69,8 +76,11 @@ func (this *Node) Get(idx uint64) *Node {
 	return nil
 }
 func (this *Node) Start(lastTalliedResult []byte) bool {
+	if len(this.children) == 0 || this.FallbackId == NoFallbackOption {
+		return false
+	}
 	currentBlockNumber := GetCurrentBlockNumber()
-	return this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)), currentBlockNumber)
+	return this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)), currentBlockNumber, this.FallbackId)
 }
 func (this *Node) isValidChoice(option interface{}) bool {
 	if this.voteMachine.IsStarted() == false {
@@ -81,10 +91,10 @@ func (this *Node) isValidChoice(option interface{}) bool {
 
 /**
 * Function vote
-* Params: tr *Initiative, who string, option interface{}
+* Params: tr *Mission, who string, option interface{}
 * Returns: voteRecordedSucceed bool, talliedSucceed bool, newNodeStartedSucceed bool
  */
-func (this *Node) vote(tr *Initiative, who string, option interface{}) (bool, bool, bool) {
+func (this *Node) vote(tr *Mission, who string, option interface{}) (bool, bool, bool) {
 	isRecored := this.voteMachine.Record(who, option)
 	if isRecored == true {
 		fmt.Println("Vote is recorded")

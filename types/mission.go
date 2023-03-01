@@ -8,7 +8,7 @@ import (
 	"github.com/hectagon-finance/chain-mvp/third_party/utils"
 )
 
-type Initiative struct {
+type Mission struct {
 	id       string
 	Title    string
 	Fulltext string
@@ -21,11 +21,11 @@ type Initiative struct {
 	isActivated bool
 }
 
-var initiatives = make(map[string]*Initiative)
+var Missions = make(map[string]*Mission)
 
-func CreateInitiative(title string, fulltext string, start *Node) (*Initiative, string) {
+func CreateMission(title string, fulltext string, start *Node) (*Mission, string) {
 	id := utils.RandString(16)
-	i := Initiative{
+	i := Mission{
 		id:          id,
 		Title:       title,
 		Fulltext:    fulltext,
@@ -34,12 +34,12 @@ func CreateInitiative(title string, fulltext string, start *Node) (*Initiative, 
 		isStarted:   false,
 		isActivated: false,
 	}
-	initiatives[id] = &i
+	Missions[id] = &i
 	return &i, id
 }
 
-func GetInitiative(id string) (*Initiative, error) {
-	if i, ok := initiatives[id]; ok == true {
+func GetMission(id string) (*Mission, error) {
+	if i, ok := Missions[id]; ok == true {
 		return i, nil
 	}
 	return nil, errors.New(id + " not found")
@@ -47,46 +47,46 @@ func GetInitiative(id string) (*Initiative, error) {
 
 // TODO: is it safe to do this? should we check all the nodes and events (observer)?
 func DeleteInitivate(id string) bool {
-	if _, ok := initiatives[id]; ok {
-		delete(initiatives, id)
+	if _, ok := Missions[id]; ok {
+		delete(Missions, id)
 		return true
 	}
 	return false
 }
 
-// func (this *Initiative) edit(d Initiative) bool {
+// func (this *Mission) edit(d Mission) bool {
 // 	return false
 // }
 
-func (this *Initiative) Start() bool {
+func (this *Mission) Start() bool {
 	if this.isStarted == false {
 		nodeStarted := this.StartNode.Start(nil)
 		if nodeStarted == false {
-			fmt.Println("Initiative cannot start")
+			fmt.Println("Mission cannot start")
 		} else {
 			this.isStarted = true
 			this.isActivated = true
 			this.Current = this.StartNode
-			fmt.Println("Initiative started successfully")
+			fmt.Println("Mission started successfully")
 		}
 	}
 	return this.isStarted
 }
 
-func (this *Initiative) Stop() {
+func (this *Mission) Stop() {
 	if this.isStarted == true {
 		this.isStarted = false
 		this.isActivated = false
 	}
 }
 
-func (this *Initiative) Pause() {
+func (this *Mission) Pause() {
 	if this.isActivated == true && this.isStarted == true {
 		this.isActivated = false
 	}
 }
 
-func (this *Initiative) Resume() (bool, error) {
+func (this *Mission) Resume() (bool, error) {
 	if this.isStarted == true {
 		this.isActivated = true
 		return true, nil
@@ -94,10 +94,10 @@ func (this *Initiative) Resume() (bool, error) {
 	return false, errors.New(this.id + " is stopped, can not start again")
 }
 
-func (this *Initiative) PrintFromStart() {
+func (this *Mission) PrintFromStart() {
 	tree.Print(this.StartNode)
 }
-func (this *Initiative) PrintFromCurrent() {
+func (this *Mission) PrintFromCurrent() {
 	if this.isStarted != true {
 		tree.Print(this.StartNode)
 	} else {
@@ -108,7 +108,7 @@ func (this *Initiative) PrintFromCurrent() {
 /**
 * TODO: Beside moving to the NextNode, should init something in the nextNode with result from the last Node
 **/
-func (this *Initiative) Choose(idx uint64) {
+func (this *Mission) Choose(idx uint64) {
 	nextNode := this.Current.Get(idx)
 	if nextNode == nil {
 		fmt.Println(idx, " out of bound, no move")
@@ -120,7 +120,7 @@ func (this *Initiative) Choose(idx uint64) {
 	}
 	// emit Event
 }
-func (this *Initiative) IsValidChoice(option interface{}) bool {
+func (this *Mission) IsValidChoice(option interface{}) bool {
 	return this.Current.isValidChoice(option)
 }
 
@@ -129,7 +129,7 @@ func (this *Initiative) IsValidChoice(option interface{}) bool {
 * Params: option interface{}, who string
 * Returns: voteRecordedSucceed bool, talliedSucceed bool, newNodeStartedSucceed bool
  */
-func (this *Initiative) Vote(option interface{}, who string) (bool, bool, bool) {
+func (this *Mission) Vote(option interface{}, who string) (bool, bool, bool) {
 	if !this.isActivated {
 		return false, false, false
 	}
