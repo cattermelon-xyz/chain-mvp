@@ -1,8 +1,11 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"strconv"
 
 	"github.com/hectagon-finance/chain-mvp/third_party/tree"
 	"github.com/hectagon-finance/chain-mvp/third_party/utils"
@@ -105,31 +108,37 @@ func (this *Mission) PrintFromCurrent() {
 	}
 }
 
-/**
-* TODO: Beside moving to the NextNode, should init something in the nextNode with result from the last Node
-**/
-func (this *Mission) Choose(idx uint64) {
+func (this *Mission) Choose(idx uint64, tallyResult []byte) (bool, error) {
 	nextNode := this.Current.Get(idx)
+	started := false
+	var err error = nil
 	if nextNode == nil {
-		fmt.Println(idx, " out of bound, no move")
-	}
-	if nextNode != nil {
+		msg := strconv.FormatUint(idx, 64) + " out of bound, no move"
+		log.Fatal(msg)
+		err = errors.New(msg)
+	} else {
 		fmt.Printf("from %s choose: %d got %s\n", this.Current.Title, idx, nextNode.Title)
 		this.Current = nextNode
 		this.PrintFromCurrent()
+		started = nextNode.Start(tallyResult)
+
+		args := []string{this.id, nextNode.Title}
+		b, _ := json.Marshal(args)
+		_, evid := CreateEvent("NextCheckPoint", b)
+		Emit(evid)
 	}
-	// emit Event
+	return started, err
 }
-func (this *Mission) IsValidChoice(option interface{}) bool {
+func (this *Mission) IsValidChoice(option []byte) bool {
 	return this.Current.isValidChoice(option)
 }
 
 /**
 * Function Vote
-* Params: option interface{}, who string
+* Params: option []byte, who string
 * Returns: voteRecordedSucceed bool, talliedSucceed bool, newNodeStartedSucceed bool
  */
-func (this *Mission) Vote(option interface{}, who string) (bool, bool, bool) {
+func (this *Mission) Vote(option []byte, who string) (bool, bool, bool) {
 	if !this.isActivated {
 		return false, false, false
 	}

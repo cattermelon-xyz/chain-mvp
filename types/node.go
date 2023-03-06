@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 
@@ -23,7 +24,6 @@ func (n *Node) Data() interface{} {
 	return n.Title
 }
 
-// TODO: if voteMachine cannot Tally a result, then what should happen?
 // cannot return n.children directly.
 // https://github.com/golang/go/wiki/InterfaceSlice
 func (n *Node) Children() (c []tree.Node) {
@@ -82,7 +82,7 @@ func (this *Node) Start(lastTalliedResult []byte) bool {
 	currentBlockNumber := GetCurrentBlockNumber()
 	return this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)), currentBlockNumber, this.FallbackId)
 }
-func (this *Node) isValidChoice(option interface{}) bool {
+func (this *Node) isValidChoice(option []byte) bool {
 	if this.voteMachine.IsStarted() == false {
 		return false
 	}
@@ -91,35 +91,34 @@ func (this *Node) isValidChoice(option interface{}) bool {
 
 /**
 * Function vote
-* Params: tr *Mission, who string, option interface{}
+* Params: tr *Mission, who string, option []byte
 * Returns: voteRecordedSucceed bool, talliedSucceed bool, newNodeStartedSucceed bool
+* TODO: what if we want to hide the voter's option from validator?
  */
-func (this *Node) vote(tr *Mission, who string, option interface{}) (bool, bool, bool) {
+func (this *Node) vote(tr *Mission, who string, option []byte) (bool, bool, bool) {
 	isRecored := this.voteMachine.Record(who, option)
+	b, _ := json.Marshal(who)
 	if isRecored == true {
 		fmt.Println("Vote is recorded")
-		_, evId := CreateEvent("VoteRecorded", nil)
+		_, evId := CreateEvent("VoteRecorded", b)
 		Emit(evId)
 	} else {
 		fmt.Println("Vote record failed")
+		_, evId := CreateEvent("VoteRecordFailed", b)
+		Emit(evId)
 		return false, false, false
 	}
 	if this.voteMachine.ShouldTally() == true {
-		currentBlockNumber := GetCurrentBlockNumber()
-		isTallied := this.voteMachine.Tally(currentBlockNumber)
+		isTallied := this.voteMachine.Tally()
+		_, evId := CreateEvent("IsTallied", b)
+		Emit(evId)
 		if isTallied == true {
 			tallyResult, option := this.voteMachine.GetTallyResult()
 			fmt.Printf("Tally and the new option is %d\n", option)
 			if option != NoOptionMade {
-				tr.Choose(option)
-				newNodeStarted := tr.Current.Start(tallyResult)
-				if newNodeStarted == true {
-					fmt.Println("New node started")
-					return true, true, true
-				} else {
-					fmt.Println("New node not started")
-					return true, true, false
-				}
+				newNodeStarted, _ := tr.Choose(option, tallyResult)
+				fmt.Printf("New node started %t\n", newNodeStarted)
+				return true, true, newNodeStarted
 			}
 		} else {
 			fmt.Println("Tally failed")
@@ -127,9 +126,12 @@ func (this *Node) vote(tr *Mission, who string, option interface{}) (bool, bool,
 		}
 	} else {
 		lastTalliedBlockNo := this.voteMachine.GetLastTalliedBlock()
-		_, option := this.voteMachine.GetTallyResult()
+		tallyResult, option := this.voteMachine.GetTallyResult()
 		if lastTalliedBlockNo != NeverBeenTallied && option == NoOptionMade {
-			// TODO: if voteMachine cannot Tally a result, then what should happen?
+			// If voteMachine cannot Tally a result, then it should go to the FallbackOption
+			newNodeStarted, _ := tr.Choose(this.FallbackId, tallyResult)
+			fmt.Printf("New node started %t\n", newNodeStarted)
+			return true, true, newNodeStarted
 		}
 	}
 	return true, false, false

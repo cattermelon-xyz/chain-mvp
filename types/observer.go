@@ -7,8 +7,9 @@ import (
 )
 
 type EventData struct {
-	Name string
-	Args []byte
+	MissionId string
+	Name      string
+	Args      []byte
 }
 
 var Broadcast = make(chan EventData) // channel to broadcast data

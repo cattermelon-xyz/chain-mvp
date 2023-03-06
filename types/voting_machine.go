@@ -20,15 +20,15 @@ type VotingMachine interface {
 	// Describe the rule of the vote
 	Desc() string
 	// Validate the vote
-	ValidateVote(option interface{}) bool
-	// Record the data: who_string choose option_interface{}
-	Record(who string, option interface{}) bool
+	ValidateVote(option []byte) bool
+	// Record the data: who_string choose option_[]byte
+	Record(who string, option []byte) bool
 	// Calculate the voting power of the vote
-	VotingPower(who string, option interface{}) uint64
+	VotingPower(who string, option []byte) uint64
 	// Cost of the Vote
-	Cost(who string, option interface{}) uint64
+	Cost(who string, option []byte) uint64
 	// Tally the vote, return if tally happen successfully
-	Tally(blockNumber uint64) bool
+	Tally() bool
 	// Return true if VotingMachine beable to tally
 	ShouldTally() bool
 	// Return the last tallied block
