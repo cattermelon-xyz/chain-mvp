@@ -20,6 +20,7 @@ type Polling struct {
 	maxChoicePerVote   uint64 // must input from NewPolling
 	tallyResult        []byte
 	lastTalliedBlock   uint64
+	blockchain         types.Blockchain
 }
 
 /**
@@ -27,7 +28,7 @@ type Polling struct {
  */
 func NewPolling(predefinedChoices []string,
 	maxChoicePerVote uint64, tallyBeforeBlockNo uint64, voteBeforeBlockNo uint64,
-	noOfOptions uint64, fallBackOptionId uint64) *Polling {
+	noOfOptions uint64, fallBackOptionId uint64, blockchain types.Blockchain) *Polling {
 	if maxChoicePerVote == 0 || tallyBeforeBlockNo == 0 {
 		return nil
 	}
@@ -50,6 +51,7 @@ func NewPolling(predefinedChoices []string,
 		voteBeforeBlockNo:  voteBeforeBlockNo,
 		tallyBeforeBlockNo: tallyBeforeBlockNo,
 		lastTalliedBlock:   0,
+		blockchain:         blockchain,
 	}
 }
 
@@ -126,7 +128,7 @@ func (this *Polling) IsStarted() bool {
 * Return True if the option is validated
  */
 func (this *Polling) ValidateVote(rawChoicesIdx []byte) bool {
-	currentBlockNumber := types.GetCurrentBlockNumber()
+	currentBlockNumber := this.blockchain.GetCurrentBlockNumber()
 	if currentBlockNumber > this.voteBeforeBlockNo {
 		return false
 	}
@@ -159,7 +161,7 @@ func (this *Polling) Record(who string, rawChoicesIdx []byte) bool {
 		return false
 	}
 	for _, val := range choicesIdx {
-		this.choicesResult[uint64(val)] += this.VotingPower(who, rawChoicesIdx)
+		this.choicesResult[uint64(val)] += this.GetVotingPower(who, rawChoicesIdx)
 	}
 	return true
 }
@@ -170,7 +172,7 @@ func (this *Polling) Record(who string, rawChoicesIdx []byte) bool {
 * TODO: what if we want to hide the who-vote-what from Validator?
 * Return the VotingPower of the vote
  */
-func (this *Polling) VotingPower(who string, rawChoicesIdx []byte) uint64 {
+func (this *Polling) GetVotingPower(who string, rawChoicesIdx []byte) uint64 {
 	// TODO: connect to oracle to calculate voting power
 	return 1
 }
@@ -185,7 +187,7 @@ func (this *Polling) ShouldTally() bool {
 	if this.started == false {
 		return false
 	}
-	currentBlock := types.GetCurrentBlockNumber()
+	currentBlock := this.blockchain.GetCurrentBlockNumber()
 	if this.tallyBeforeBlockNo > currentBlock {
 		return false
 	}
@@ -196,7 +198,7 @@ func (this *Polling) ShouldTally() bool {
 * Params: who string, rawChoicesIdx []byte
 * Return the Cost for the Vote
  */
-func (this *Polling) Cost(who string, rawChoicesIdx []byte) uint64 {
+func (this *Polling) GetCost(who string, rawChoicesIdx []byte) uint64 {
 	return 0
 }
 
@@ -209,7 +211,7 @@ func (this *Polling) Tally() bool {
 	if this.started == false {
 		return false
 	}
-	currentBlock := types.GetCurrentBlockNumber()
+	currentBlock := this.blockchain.GetCurrentBlockNumber()
 	if currentBlock > this.tallyBeforeBlockNo {
 		return false
 	}
@@ -235,4 +237,8 @@ func (this *Polling) GetTallyResult() ([]byte, uint64) {
 	if this.lastTalliedBlock != 0 {
 	}
 	return nil, 0
+}
+
+func Reveal([]byte) bool {
+	return false
 }

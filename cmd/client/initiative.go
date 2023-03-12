@@ -4,7 +4,7 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package client
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -19,9 +19,9 @@ Note: option "build" will clear the root checkpoint and all of its children`,
 		id, _ := cmd.Flags().GetString("id")
 		option, _ := cmd.Flags().GetString("option")
 		if option != "" {
-			fmt.Println("Try ", option)
+			log.Println("Try ", option)
 			if id != "" && option == "build" {
-				fmt.Println("Invalid parameters")
+				log.Println("Invalid parameters")
 			}
 		}
 	},

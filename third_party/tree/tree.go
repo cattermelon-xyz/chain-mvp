@@ -3,6 +3,7 @@ package tree
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"unicode/utf8"
 )
@@ -75,7 +76,7 @@ func (q *queue) peek() Node {
 
 // Print prints the formatted tree to standard output. To handle ErrDuplicateNode use PrintWithError.
 func Print(root Node) {
-	fmt.Print(Sprint(root))
+	log.Print(Sprint(root))
 }
 
 // Sprint returns the formatted tree. To handle ErrDuplicateNode use SprintWithError.
@@ -93,7 +94,7 @@ func PrintWithError(root Node) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(s)
+	log.Print(s)
 	return nil
 }
 

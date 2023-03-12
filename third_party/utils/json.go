@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -10,13 +10,13 @@ import (
 func getDataFolder() (string, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	dataFolder := filepath.Join(homedir, "htg")
 	err = os.MkdirAll(dataFolder, 0755)
 	if err != nil {
-		fmt.Println("err in ", dataFolder)
-		fmt.Println(err)
+		log.Println("err in ", dataFolder)
+		log.Println(err)
 	}
 	filepath.Join(homedir+"/htg", "tmp")
 	err = os.MkdirAll(dataFolder, 0755)
@@ -28,7 +28,7 @@ func getDataFolder() (string, error) {
 func ReadFile(filepath string) []byte {
 	content, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil
 	}
 	return content
@@ -43,8 +43,8 @@ func Save(content []byte, id string, datatype string) bool {
 		err = ioutil.WriteFile(dataFolder+"/initative/"+id+".json", content, 0755)
 	}
 	if err != nil {
-		fmt.Println("err in Write file")
-		fmt.Println(err)
+		log.Println("err in Write file")
+		log.Println(err)
 		return false
 	}
 	return true

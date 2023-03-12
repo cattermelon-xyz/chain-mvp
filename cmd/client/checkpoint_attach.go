@@ -4,7 +4,7 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package client
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -17,7 +17,7 @@ var checkpointAttachCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		id, _ := cmd.Flags().GetString("id")
 		to, _ := cmd.Flags().GetString("to")
-		fmt.Printf("Attach a CheckPoint %s to %s", id, to)
+		log.Printf("Attach a CheckPoint %s to %s", id, to)
 	},
 }
 

@@ -4,7 +4,7 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package client
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -15,7 +15,7 @@ var voteCmd = &cobra.Command{
 	Short: "vote -i {id string} -o {option int}",
 	Long:  `vote -i {id string} -o {option int}.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("vote called")
+		log.Println("vote called")
 	},
 }
 

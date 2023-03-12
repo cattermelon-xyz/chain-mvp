@@ -1,8 +1,6 @@
 package types
 
-import (
-	"fmt"
-)
+import "log"
 
 type Who struct {
 	Network  Network
@@ -12,7 +10,7 @@ type Who struct {
 func (this *Who) vote(tree *Mission, option []byte) {
 	isValid := tree.IsValidChoice(option)
 	if !isValid {
-		fmt.Printf("%s vote %d, this is an invalid vote\n", this.Identity, option)
+		log.Printf("%s vote %d, this is an invalid vote\n", this.Identity, option)
 		return
 	}
 }

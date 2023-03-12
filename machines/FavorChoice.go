@@ -2,7 +2,7 @@ package machines
 
 import (
 	"bytes"
-	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/go-git/go-git/v5/utils/binary"
@@ -20,9 +20,10 @@ type FavorChoice struct {
 	lastTalliedBlockNo uint64
 	startedBlock       uint64
 	votingLength       uint64
+	blockchain         types.Blockchain
 }
 
-func NewFavorChoice(threshold uint64) *FavorChoice {
+func NewFavorChoice(threshold uint64, blockchain types.Blockchain) *FavorChoice {
 	return &FavorChoice{
 		Threshold:          threshold,
 		voted:              make(map[uint64]uint64),
@@ -32,6 +33,7 @@ func NewFavorChoice(threshold uint64) *FavorChoice {
 		noOfOption:         0,
 		votingLength:       100,
 		lastTalliedBlockNo: types.NeverBeenTallied,
+		blockchain:         blockchain,
 	}
 }
 
@@ -71,7 +73,7 @@ func (this *FavorChoice) Tally(lastTalliedBlockNo uint64) bool {
 }
 
 func (this *FavorChoice) ShouldTally() bool {
-	currentBlockNo := types.GetCurrentBlockNumber()
+	currentBlockNo := this.blockchain.GetCurrentBlockNumber()
 	if this.votingLength > currentBlockNo-this.startedBlock {
 		return true
 	}
@@ -84,7 +86,7 @@ func (this *FavorChoice) GetTallyResult() ([]byte, uint64) {
 
 func (this *FavorChoice) Start(lastResult []byte, noOfOption uint64, startedBlock uint64) bool {
 	if this.isStarted == true {
-		fmt.Println("FavorChoice already started!")
+		log.Println("FavorChoice already started!")
 		return false
 	}
 	if lastResult != nil {

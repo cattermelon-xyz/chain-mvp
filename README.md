@@ -29,6 +29,12 @@ This project is the MVP for the new chain. These code focus on the application l
 - [x] Implement a mock Concensus goroutine to produce new Block
 - [x] Integrate all mock goroutines
 - [x] The chain should emit `Event`, this should reflect in the VotingMachine{} and be able to connect to outside with WebSocket
+- [x] Support hiding voting result till revealation
+- [x] Use Log instead of fmt.Println
+- [x] Write testcase
+- [ ] Vote should not be recorded if fallbackAttempt is TRUE
+- [ ] Fallback should be called when a new block is produced
+- [ ]Vote should specify what CheckPoint it is voting, to prevent unintended vote
 - [ ] Implement Polling, note that UpVote is just a special case of Polling
 - [ ] Implement client commandline
 - [ ] Demo ready

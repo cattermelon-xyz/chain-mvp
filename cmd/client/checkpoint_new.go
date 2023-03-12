@@ -5,7 +5,7 @@ package client
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 
 	"github.com/hectagon-finance/chain-mvp/third_party/utils"
 	"github.com/spf13/cobra"
@@ -19,7 +19,7 @@ var checkpointNewCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		filepath, _ := cmd.Flags().GetString("path")
 		if filepath == "" {
-			fmt.Println("Cannot input an empty file. Let's preproces it before pushing to the server")
+			log.Println("Cannot input an empty file. Let's preproces it before pushing to the server")
 		}
 	},
 }
@@ -37,7 +37,7 @@ func machineFromCommand(filepath string, machineType string) {
 	var info map[string]interface{}
 	err := json.Unmarshal(b, &info)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 

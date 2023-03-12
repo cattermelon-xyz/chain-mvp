@@ -4,7 +4,7 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package client
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -17,7 +17,7 @@ var checkpointCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		deleteId, _ := cmd.Flags().GetString("delete")
 		if deleteId != "" {
-			fmt.Println("Try to delete ", deleteId)
+			log.Println("Try to delete ", deleteId)
 		}
 	},
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/hectagon-finance/chain-mvp/machines"
 	"github.com/hectagon-finance/chain-mvp/types"
@@ -19,7 +19,7 @@ func main() {
 	b := types.CreateNodeWithChildren("b", []*types.Node{d, e}, bRule)
 	a := types.CreateNodeWithChildren("a", []*types.Node{b, c}, aRule)
 	t, _ := types.CreateInitiative("DEMO", "A simple Initiative", a)
-	fmt.Println("Original initiative:")
+	log.Println("Original initiative:")
 	t.PrintFromCurrent()
 	t.Start()
 	t.Vote(0, "alice")

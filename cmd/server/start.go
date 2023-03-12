@@ -5,11 +5,12 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/hectagon-finance/chain-mvp/types"
+	"github.com/hectagon-finance/chain-mvp/types/event"
 	"github.com/spf13/cobra"
 
 	"github.com/gin-contrib/cors"
@@ -25,8 +26,9 @@ var startCmd = &cobra.Command{
 	Long:  `Start server. Default API port is 8813`,
 	Run: func(cmd *cobra.Command, args []string) {
 		port, _ := cmd.Flags().GetInt16("port")
-		types.StartConsensus()
-		go handleEvents()
+		ev := event.GetEventManager()
+		types.StartConsensus(ev)
+		go handleEvents(ev)
 		startListen(port)
 	},
 }
@@ -43,15 +45,15 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func handleEvents() {
+func handleEvents(ev event.EventManager) {
 	for {
-		ev := <-types.Broadcast
-		fmt.Println("ev: ", ev)
+		channel := <-ev.Broadcast()
+		log.Println("ev: ", channel)
 		// Send it out to every client that is currently connected
 		for client := range clients {
-			err := client.WriteJSON(ev)
+			err := client.WriteJSON(channel)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				client.Close()
 				delete(clients, client)
 			}
@@ -64,27 +66,29 @@ func startListen(port int16) {
 	* Return the current Block
 	 */
 	r.GET("/block", func(c *gin.Context) {
-		blockNo := types.GetCurrentBlockNumber()
+		ev := event.GetEventManager()
+		blockchain := types.GetBlockchain()
+		blockNo := blockchain.GetCurrentBlockNumber()
 		c.JSON(http.StatusOK, gin.H{
 			"currentBlockNo": blockNo,
 		})
 
 		// HACK: mock event
 		v, _ := json.Marshal(blockNo)
-		_, id := types.CreateEvent("BlockCalled", v)
-		go types.Emit(id)
+		_, id := ev.CreateEvent("BlockCalled", v)
+		go ev.Emit(id)
 	})
 	r.GET("/ws", func(c *gin.Context) {
 		// Upgrade initial GET request to a websocket
 		// Configure the upgrader
 		ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		// Make sure we close connection when the function return
 		// defer ws.Close()
 		clients[ws] = true
-		fmt.Println("A client is registered")
+		log.Println("A client is registered")
 	})
 	// Set up CORS middleware
 	config := cors.DefaultConfig()
