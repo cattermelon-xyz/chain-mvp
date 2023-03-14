@@ -7,8 +7,12 @@ This project is the MVP for the new chain. These code focus on the application l
 
 1. Through `main.go`, you can express the workflow of building, managing and using of an `Mission`. *Expected: end of Feb 2023*
 2. Using a web interface, user can interactive with a go lang `web-server` to build, manage and use an `Mission`. `Note:` using same tech stack with `cosmos` module to make the transition between phases easier. *Expected: end of Mar 2023*
- 2.1. Integrate Login & Logout web2 style
- 2.2. Trigger some event on Twitter, Airtable.
+
+<ol>
+  <li>Integrate Login & Logout web2 style</li>
+  <li>Integrate wallet (connect wallet and use token to vote) & trigger Web2 enforcer actions (post twitter, interact with Airtable, discord/slack, send email...).</li>
+</ol>
+
 3. Decentralize the `web-server` with `cosmos-sdk`. *Expected: end of May 2023*
 
 ## Documents
