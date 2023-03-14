@@ -14,17 +14,18 @@ type MockChkP struct {
 	name       string
 	children   []*types.CheckPoint
 	FallbackId uint64
-	want       bool
+	want       types.CheckPointStartedStatus
 }
 
 func (m MockChkP) getChkP() *types.CheckPoint {
-	chkp := types.CheckPoint{
-		FallbackId: m.FallbackId,
-	}
+	chkp := types.CreateEmptyCheckPoint("test title", "test desc", &MockVoteMachine{
+		Started: true,
+	}, &MockBlockchain{})
+
 	if len(m.children) > 0 {
 		chkp.Attach(m.children[0])
 	}
-	return &chkp
+	return chkp
 }
 
 func TestCheckPointStart(t *testing.T) {
@@ -40,7 +41,7 @@ func TestCheckPointStart(t *testing.T) {
 			name:       fmt.Sprintf("No children & FallbackId is %s (const NoFallbackOption)", strconv.FormatUint(types.NoFallbackOption, 10)),
 			children:   make([]*types.CheckPoint, 0),
 			FallbackId: types.NoFallbackOption,
-			want:       false,
+			want:       types.ChkPFailToStart,
 		},
 		{
 			name: fmt.Sprintf("1 children & FallbackId is %s (const NoFallbackOption)", strconv.FormatUint(types.NoFallbackOption, 10)),
@@ -48,7 +49,7 @@ func TestCheckPointStart(t *testing.T) {
 				{},
 			},
 			FallbackId: types.NoFallbackOption,
-			want:       false,
+			want:       types.ChkPFailToStart,
 		},
 		{
 			name: fmt.Sprintf("1 children & FallbackId is %s", strconv.FormatUint(1, 10)),
@@ -56,22 +57,18 @@ func TestCheckPointStart(t *testing.T) {
 				{},
 			},
 			FallbackId: 1,
-			want:       true,
+			want:       types.ChkPStarted,
 		},
 		{
 			name:       fmt.Sprintf("No children & FallbackId is %s", strconv.FormatUint(types.NoFallbackOption, 10)),
 			children:   make([]*types.CheckPoint, 0),
 			FallbackId: 1,
-			want:       false,
+			want:       types.ChkPFailToStart,
 		},
 	}
 
 	for _, tt := range table {
 		chkP := tt.getChkP()
-
-		chkP.SetVotingMachine(&MockVoteMachine{
-			Started: true,
-		})
 
 		assert.Equal(t, types.ExportCheckPointStart(chkP, []byte{0}), tt.want, tt.name)
 	}

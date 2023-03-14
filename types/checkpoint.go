@@ -6,11 +6,20 @@ import (
 
 	"github.com/hectagon-finance/chain-mvp/third_party/tree"
 	"github.com/hectagon-finance/chain-mvp/third_party/utils"
+	"github.com/hectagon-finance/chain-mvp/types/event"
 )
 
 const NoFallbackOption = math.MaxUint64 - 1
 const EndOfMission = math.MaxUint64 - 2
 const GenesisBlock = 0
+
+type CheckPointStartedStatus string
+
+const (
+	ChkPFailToStart    CheckPointStartedStatus = "CheckPoint Fail To Start"
+	ChkPStarted        CheckPointStartedStatus = "CheckPoint Started"
+	OutputEventEmitted CheckPointStartedStatus = "Output Event Emitted"
+)
 
 type CheckPoint struct {
 	Id               string
@@ -22,6 +31,7 @@ type CheckPoint struct {
 	lastBlockToVote  uint64
 	lastBlockToTally uint64
 	blockchain       Blockchain
+	outputEvent      *event.Event
 }
 
 // return something that is printable
@@ -49,6 +59,7 @@ func CreateEmptyCheckPoint(title string, desc string, b VotingMachine, blockchai
 		lastBlockToVote:  GenesisBlock,
 		lastBlockToTally: GenesisBlock,
 		blockchain:       blockchain,
+		outputEvent:      nil,
 	}
 	return &CheckPoint
 }
@@ -63,6 +74,29 @@ func CreateCheckPoinWithChildren(name string, desc string, children []*CheckPoin
 		lastBlockToVote:  lastBlockToVote,
 		lastBlockToTally: lastBlockToTally,
 		blockchain:       blockchain,
+		outputEvent:      nil,
+	}
+	return &c
+}
+
+/**
+* Return an Output with EventData.
+* When this node start(), an event will be emitted.
+ */
+func CreateOutput(name string, desc string, evdata event.EventData, blockchain Blockchain) *CheckPoint {
+	em := blockchain.GetEventManager()
+	ev, _ := em.CreateEvent(evdata.Name, evdata.Args)
+	c := CheckPoint{
+		Id:               utils.RandString(16),
+		Title:            name,
+		Description:      desc,
+		FallbackId:       NoFallbackOption,
+		children:         nil,
+		voteMachine:      nil,
+		lastBlockToVote:  GenesisBlock,
+		lastBlockToTally: GenesisBlock,
+		blockchain:       blockchain,
+		outputEvent:      ev,
 	}
 	return &c
 }
@@ -72,10 +106,6 @@ func (this *CheckPoint) Attach(child *CheckPoint) *CheckPoint {
 	}
 	this.children = append(this.children, child)
 	return child
-}
-
-func (this *CheckPoint) SetVotingMachine(v VotingMachine) {
-	this.voteMachine = v
 }
 
 /**
@@ -95,14 +125,31 @@ func (this *CheckPoint) Get(idx uint64) *CheckPoint {
 	}
 	return nil
 }
-func (this *CheckPoint) start(lastTalliedResult []byte) bool {
-	if this.children == nil {
-		return false
+
+/**
+* Return CheckPointStartedStatus: {OutputEventEmitted, ChkPFailToStart, ChkPStarted}
+ */
+func (this *CheckPoint) start(lastTalliedResult []byte) CheckPointStartedStatus {
+	// an Output or a CheckPoint with votingMachine?
+	if this.outputEvent != nil {
+		this.blockchain.GetEventManager().Emit(this.outputEvent.Id)
+		return OutputEventEmitted
+	} else { // a CheckPoint with votingMachine
+		if this.children == nil {
+			return ChkPFailToStart
+		}
+		if len(this.children) == 0 || this.FallbackId == NoFallbackOption {
+			return ChkPFailToStart
+		}
 	}
-	if len(this.children) == 0 || this.FallbackId == NoFallbackOption {
-		return false
+	if this.voteMachine == nil {
+		return ChkPFailToStart
 	}
-	return this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)), this.FallbackId)
+	started := this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)), this.FallbackId)
+	if started == true {
+		return ChkPStarted
+	}
+	return ChkPFailToStart
 }
 func (this *CheckPoint) isValidChoice(option []byte) bool {
 	if this.voteMachine.IsStarted() == false {
@@ -122,16 +169,18 @@ func (this *CheckPoint) vote(tr *Mission, who string, input []byte) (ExecutionSt
 	var tallyStatus ExecutionStatus = DIDNOTSTART
 	var newChkPStatus ExecutionStatus = DIDNOTSTART
 	fallbackAttempt := false
-	if this.voteMachine.Record(who, input) == true {
-		recordStatus = SUCCEED
-	} else {
-		recordStatus = FAILED
-	}
 	// check for fallback
 	fallbackAttempt, newChkPStatus = fallback(tr, this.voteMachine, this.FallbackId)
-	// then check for tally
-	if fallbackAttempt == false && this.voteMachine.ShouldTally() == true {
-		tallyStatus, newChkPStatus = tally(tr, this.voteMachine)
+	if fallbackAttempt == false {
+		if this.voteMachine.Record(who, input) == true {
+			recordStatus = SUCCEED
+		} else {
+			recordStatus = FAILED
+		}
+		// then check for tally
+		if fallbackAttempt == false && this.voteMachine.ShouldTally() == true {
+			tallyStatus, newChkPStatus = tally(tr, this.voteMachine)
+		}
 	}
 	return recordStatus, tallyStatus, newChkPStatus, fallbackAttempt
 }
@@ -143,14 +192,14 @@ func (this *CheckPoint) vote(tr *Mission, who string, input []byte) (ExecutionSt
  */
 func tally(tr *Mission, m VotingMachine) (ExecutionStatus, ExecutionStatus) {
 	_tallyStatus, _, tallyResult, selectedOption := m.Tally()
-	_newChkPointStatus := false
+	_newChkPointStatus := ChkPFailToStart
 	tallyStatus := FAILED
 	newChkPointStatus := DIDNOTSTART
 	if _tallyStatus == true {
 		tallyStatus = SUCCEED
 		if selectedOption != NoOptionMade {
 			_newChkPointStatus, _ = tr.Choose(selectedOption, tallyResult)
-			if _newChkPointStatus == true {
+			if _newChkPointStatus == ChkPStarted {
 				newChkPointStatus = SUCCEED
 			} else {
 				newChkPointStatus = FAILED
@@ -173,7 +222,7 @@ func fallback(tr *Mission, m VotingMachine, fallbackId uint64) (bool, ExecutionS
 	newChkPointStatus := DIDNOTSTART
 	if currentBlk > lastBlkVote && currentBlk > lastBlkTally && selectedOption == NoOptionMade {
 		_newChkPointStatus, _ := tr.Choose(fallbackId, tallyResult)
-		if _newChkPointStatus == true {
+		if _newChkPointStatus == ChkPStarted {
 			newChkPointStatus = SUCCEED
 		} else {
 			newChkPointStatus = FAILED

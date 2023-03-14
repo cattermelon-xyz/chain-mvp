@@ -13,6 +13,7 @@ type blockchainStruct struct {
 
 type Blockchain interface {
 	GetCurrentBlockNumber() uint64
+	GetEventManager() event.EventManager
 }
 
 type BlockData struct {
@@ -39,6 +40,10 @@ func (this *blockchainStruct) GetCurrentBlockNumber() uint64 {
 	BlockDataRequest <- true
 	blockResp := <-BlockDataResp
 	return blockResp.CurrentBlockNumber
+}
+
+func (this *blockchainStruct) GetEventManager() event.EventManager {
+	return event.GetEventManager()
 }
 
 var BlockDataResp = make(chan BlockData)

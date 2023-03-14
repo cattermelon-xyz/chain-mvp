@@ -19,7 +19,6 @@ const (
 	VoteFailToRecord      = "VoteFailToRecord"
 )
 
-// TODO: change EventManager to interface instead of Struct to use in testing
 type eventManagerStruct struct {
 	initialized     bool
 	registeredEvent map[string]*Event
@@ -50,14 +49,13 @@ type EventManager interface {
 }
 
 type EventData struct {
-	MissionId string
-	Name      string
-	Args      []byte
+	Name string
+	Args []byte
 }
 
 type Event struct {
-	Name         string
-	Args         []byte
+	Id           string
+	data         EventData
 	observerList map[string]Observer
 }
 
@@ -89,14 +87,11 @@ func (this *eventManagerStruct) Emit(id string) {
 	if e != nil {
 		if e.observerList != nil {
 			for _, o := range e.observerList {
-				o.Update(e.Args)
+				o.Update(e.data.Args)
 			}
 		}
 		// log.Println("Emit ", id)
-		this.Broadcast() <- EventData{
-			Name: e.Name,
-			Args: e.Args,
-		}
+		this.Broadcast() <- e.data
 		delete(this.registeredEvent, id)
 	}
 }
@@ -106,8 +101,10 @@ func (this *eventManagerStruct) Emit(id string) {
 * Return *Event, id string
  */
 func (this *eventManagerStruct) CreateEvent(name string, args []byte) (*Event, string) {
-	e := Event{Name: name, Args: args}
 	id := utils.RandString(8)
+	e := Event{
+		data: EventData{Name: name, Args: args}, Id: id,
+	}
 	this.registeredEvent[id] = &e
 	return &e, id
 }

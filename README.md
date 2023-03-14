@@ -7,6 +7,8 @@ This project is the MVP for the new chain. These code focus on the application l
 
 1. Through `main.go`, you can express the workflow of building, managing and using of an `Mission`. *Expected: end of Feb 2023*
 2. Using a web interface, user can interactive with a go lang `web-server` to build, manage and use an `Mission`. `Note:` using same tech stack with `cosmos` module to make the transition between phases easier. *Expected: end of Mar 2023*
+ 2.1. Integrate Login & Logout web2 style
+ 2.2. Trigger some event on Twitter, Airtable.
 3. Decentralize the `web-server` with `cosmos-sdk`. *Expected: end of May 2023*
 
 ## Documents
@@ -32,10 +34,11 @@ This project is the MVP for the new chain. These code focus on the application l
 - [x] Support hiding voting result till revealation
 - [x] Use Log instead of fmt.Println
 - [x] Write testcase
-- [ ] Vote should not be recorded if fallbackAttempt is TRUE
+- [x] Vote should not be recorded if fallbackAttempt is TRUE
 - [ ] Fallback should be called when a new block is produced
-- [ ]Vote should specify what CheckPoint it is voting, to prevent unintended vote
+- [x] Vote should specify what CheckPoint it is voting, to prevent unintended vote
 - [ ] Implement Polling, note that UpVote is just a special case of Polling
+- [ ] Turn program into logic(mem, input) with each `logic` is assigned an `id` that the Event would emit
 - [ ] Implement client commandline
 - [ ] Demo ready
 - [ ] Implement VetoVote

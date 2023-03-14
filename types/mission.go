@@ -97,13 +97,13 @@ func (this *Mission) StartChkP() *CheckPoint {
 func (this *Mission) Start() bool {
 	if this.isStarted == false {
 		nodeStarted := this.startChkP.start(nil)
-		if nodeStarted == false {
-			log.Fatal("Mission cannot start")
-		} else {
+		if nodeStarted == ChkPStarted {
 			this.isStarted = true
 			this.isActive = true
 			this.SetCurrentChkP(this.startChkP)
 			this.EventManager.EmitMissionStarted(this.id)
+		} else {
+			log.Fatal("Mission cannot start")
 		}
 	}
 	return this.isStarted
@@ -144,9 +144,9 @@ func (this *Mission) PrintFromCurrent() {
 	}
 }
 
-func (this *Mission) Choose(idx uint64, tallyResult []byte) (bool, error) {
+func (this *Mission) Choose(idx uint64, tallyResult []byte) (CheckPointStartedStatus, error) {
 	nextChkP := this.currentChkP.Get(idx)
-	started := false
+	var started CheckPointStartedStatus
 	var err error = nil
 	if nextChkP == nil {
 		msg := strconv.FormatUint(idx, 10) + " out of bound, no move"
@@ -154,9 +154,9 @@ func (this *Mission) Choose(idx uint64, tallyResult []byte) (bool, error) {
 		log.Println(msg)
 		err = errors.New(msg)
 	} else {
-		// log.Printf("from %s choose: %d got %s\n", this.CurrentChkP.Title, idx, nextChkP.Title)
+		log.Printf("from %s choose: %d got %s\n", this.currentChkP.Title, idx, nextChkP.Title)
 		started = nextChkP.start(tallyResult)
-		if started == true {
+		if started == ChkPStarted {
 			this.currentChkP = nextChkP
 		}
 	}
@@ -168,10 +168,10 @@ func (this *Mission) IsValidChoice(option []byte) bool {
 
 /**
 * Function Vote
-* Params: option []byte, who string
+* Params: option []byte, who string, checkPointId string
 * Returns: voteRecordedSucceed ExecutionStatus, talliedSucceed ExecutionStatus, newChkPointStartedSucceed ExecutionStatus, fallbackAttempt bool
  */
-func (this *Mission) Vote(option []byte, who string) (ExecutionStatus, ExecutionStatus, ExecutionStatus, bool) {
+func (this *Mission) Vote(option []byte, who string, checkPointId string) (ExecutionStatus, ExecutionStatus, ExecutionStatus, bool) {
 	ev := event.EmitPredefinedEvent(this.EventManager)
 	voteRecordStatus := DIDNOTSTART
 	tallyStatus := DIDNOTSTART
@@ -181,7 +181,7 @@ func (this *Mission) Vote(option []byte, who string) (ExecutionStatus, Execution
 		return DIDNOTSTART, DIDNOTSTART, DIDNOTSTART, false
 	}
 	lastChkPointId := this.currentChkP.Id
-	if this.IsValidChoice(option) == true && this.currentChkP.voteMachine.IsStarted() == true {
+	if this.IsValidChoice(option) == true && this.currentChkP.voteMachine.IsStarted() == true && checkPointId == this.currentChkP.Id {
 		log.Printf("In %s, %s vote %s\n", this.currentChkP.Data(), who, option)
 		voteRecordStatus, tallyStatus, newChkPointStatus, fallbackAttempt = this.currentChkP.vote(this, who, option)
 	} else {
