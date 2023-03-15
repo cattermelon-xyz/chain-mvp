@@ -71,7 +71,7 @@ func produceBlock(m event.EmitPredefinedEvent) {
 func startBlock(ev event.EmitPredefinedEvent) {
 	for _, m := range Missions {
 		if m.isActive == true {
-			m.TallyAtNewBlock()
+			m.BeatAtNewBlock()
 		}
 	}
 }

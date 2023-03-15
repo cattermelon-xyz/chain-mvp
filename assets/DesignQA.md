@@ -10,3 +10,7 @@
 3. `How connect to other chain works?`
 
 - User simply use MetaMask, Phantom or whatever wallet at hand to sign transaction, send it to the chain (using js sdk). Nothing new must be installed at user device.
+
+4. `When to call log.Fatal and terminate the program?`
+
+- Never?

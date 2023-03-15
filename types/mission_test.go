@@ -13,13 +13,13 @@ func TestMissionStateMachine(t *testing.T) {
 	alwaysStartMachine := MockVoteMachine{
 		Started: true,
 	}
-	chkP := types.CreateEmptyCheckPoint("test", "test desc", &alwaysStartMachine, nil)
+	chkP := types.CreateEmptyCheckPoint("test", "test desc", &alwaysStartMachine)
+	chkP.FallbackId = 1
 	chkP.Attach(&types.CheckPoint{})
-
+	blkc := &MockBlockchain{}
 	ev := MockEventManager{}
-	missionA := types.Mission{
-		EventManager: &ev, // change EventManager to interface
-	}
+	blkc.SetEventManager(&ev)
+	missionA, _ := types.CreateMission("missionA", "test", chkP, blkc)
 	missionA.SetStartChkP(chkP)
 	missionA.Start()
 	assert.Equal(t, missionA.Start(), true, "Mission started should return true")
@@ -40,18 +40,18 @@ func TestMissionVoteOnRecord(t *testing.T) {
 	machine := MockVoteMachine{
 		Started: true,
 	}
-	chkP := types.CreateEmptyCheckPoint("test", "test desc", &machine, nil)
+	chkP := types.CreateEmptyCheckPoint("test", "test desc", &machine)
+	chkP.FallbackId = 0
 	chkP.Attach(&types.CheckPoint{})
-
 	ev := MockEventManager{}
-	missionA := types.Mission{
-		EventManager: &ev, // change EventManager to interface
-	}
+	blkc := &MockBlockchain{}
+	blkc.SetEventManager(&ev)
+	missionA, _ := types.CreateMission("missionA", "test", chkP, blkc)
 	missionA.SetStartChkP(chkP)
 
 	var recordState, tallyState, newNodeState types.ExecutionStatus
 	var fallbackAttemp bool
-	recordState, tallyState, newNodeState, fallbackAttemp = missionA.Vote([]byte{0}, "", "")
+	recordState, tallyState, newNodeState, fallbackAttemp, _ = missionA.Vote([]byte{0}, "", "")
 	// cannot vote a mission not started, paused, stopped
 	assert.Equal(t, recordState, types.DIDNOTSTART, "Record must be DIDNOTSTART")
 	assert.Equal(t, tallyState, types.DIDNOTSTART, "Tally must be DIDNOTSTART")
@@ -86,33 +86,28 @@ func TestMissionVoteOnRecord(t *testing.T) {
 		VoteValid:        false,
 		ShouldTallyState: false,
 	}
-	blkc := &MockBlockchain{} // no fallback: currentBlock < lastVote, lastTally
-	blkc.SetEventManager(&ev)
 	blkc.SetCurrentBlockNumber(100)
 	chkP = types.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
-		[]*types.CheckPoint{{}}, &machine, 2, uint64(1000), uint64(1000), blkc)
-	missionB := types.Mission{
-		EventManager: &ev, // change EventManager to interface
-	}
-	missionB.SetStartChkP(chkP)
+		[]*types.CheckPoint{{}}, &machine, 2, uint64(1000), uint64(1000))
+	missionB, _ := types.CreateMission("missionB", "desc", chkP, blkc)
 	missionB.Start()
 	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Mission should Started")
-	recordState, _, _, _ = missionB.Vote([]byte{0}, "x", chkP.Id)
+	recordState, _, _, _, _ = missionB.Vote([]byte{0}, "x", chkP.Id)
 	assert.Equal(t, recordState, types.FAILED, "Record should fail")
 	assert.Equal(t, ev.UnQueue(), event.VoteFailToRecord, "Should emit VoteFailToRecord")
 	machine.VoteValid = true
 	machine.VoteRecordSucceed = false
-	recordState, _, _, _ = missionB.Vote([]byte{0}, "x", chkP.Id)
+	recordState, _, _, _, _ = missionB.Vote([]byte{0}, "x", chkP.Id)
 	assert.Equal(t, recordState, types.FAILED, "Record should fail")
 	assert.Equal(t, ev.UnQueue(), event.VoteFailToRecord, "Should emit VoteFailToRecord")
 	// vote failed to record: mismatch checkPointId
 	machine.VoteRecordSucceed = true
-	recordState, _, _, _ = missionB.Vote([]byte{0}, "x", "Incorrect CheckPointId")
+	recordState, _, _, _, _ = missionB.Vote([]byte{0}, "x", "Incorrect CheckPointId")
 	assert.Equal(t, recordState, types.FAILED, "Record should fail")
 	assert.Equal(t, ev.UnQueue(), event.VoteFailToRecord, "Should emit VoteFailToRecord")
 	// vote recorded, no tally
 	machine.VoteRecordSucceed = true
-	recordState, _, _, _ = missionB.Vote([]byte{0}, "x", chkP.Id)
+	recordState, _, _, _, _ = missionB.Vote([]byte{0}, "x", chkP.Id)
 	assert.Equal(t, recordState, types.SUCCEED, "Vote succeed")
 	assert.Equal(t, ev.UnQueue(), event.VoteRecorded, "Should emit VoteRecorded")
 }
@@ -126,15 +121,15 @@ func TestMissionVoteOnFallback(t *testing.T) {
 	machine2 := MockVoteMachine{
 		Started: true,
 	}
-
 	ev := MockEventManager{}
 	blkc.SetEventManager(&ev)
-	missionA := types.Mission{
-		EventManager: &ev, // change EventManager to interface
-	}
-	chkP2 := types.CreateEmptyCheckPoint("CheckPoint2", "test desc", &machine2, nil)
+	missionA, _ := types.CreateMission("missionA", "desc missionA", nil, blkc)
+	chkP2 := types.CreateEmptyCheckPoint("CheckPoint2", "test desc", &machine2)
+	chkP2.FallbackId = 0
+	chkP3 := types.CreateEmptyCheckPoint("CheckPoint3", "test desc", &machine2)
+	chkP2.Attach(chkP3)
 	chkP := *types.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
-		[]*types.CheckPoint{chkP2}, &machine, 0, uint64(1000), uint64(1000), blkc)
+		[]*types.CheckPoint{chkP2}, &machine, 0, uint64(1000), uint64(1000))
 	missionA.SetStartChkP(&chkP)
 	missionA.Start()
 	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Mission should Started")
@@ -145,48 +140,120 @@ func TestMissionVoteOnFallback(t *testing.T) {
 	machine.ShouldTallyState = false
 	machine2.Started = false
 	blkc.SetCurrentBlockNumber(1110) // currentBlock > last vote & last tally
-	recordState, tallyState, newNodeState, fallbackAttempt = missionA.Vote([]byte{0}, "x", chkP.Id)
+	recordState, tallyState, newNodeState, fallbackAttempt, _ = missionA.Vote([]byte{0}, "x", chkP.Id)
 	assert.Equal(t, recordState, types.DIDNOTSTART, "Should NOT be DIDNOTSTART")
 	assert.Equal(t, fallbackAttempt, true, "fallbackAttempt should be TRUE")
 	assert.Equal(t, tallyState, types.DIDNOTSTART, "tally should be DIDNOTSTART")
 	assert.Equal(t, newNodeState, types.FAILED, "New node failed to start")
 	assert.Equal(t, ev.UnQueue(), event.FallbackAttempt, "Should emit FallbackAttempt")
 	assert.Equal(t, ev.UnQueue(), event.CheckPointFailToStart, "Should emit CheckPointFailToStart")
-	// vote recorder, fallback, new node started
+	// vote recorded, fallback, new node started
 	machine2.Started = true
 	chkP = *types.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
-		[]*types.CheckPoint{chkP2}, &machine, 0, uint64(1000), uint64(1000), blkc) // reset
+		[]*types.CheckPoint{chkP2}, &machine, 0, uint64(1000), uint64(1000)) // reset
 	missionA.SetCurrentChkP(&chkP)
-	recordState, tallyState, newNodeState, fallbackAttempt = missionA.Vote([]byte{0}, "x", chkP.Id)
-	assert.Equal(t, recordState, types.DIDNOTSTART, "Should NOT be DIDNOTSTART")
+	recordState, tallyState, newNodeState, fallbackAttempt, _ = missionA.Vote([]byte{0}, "x", chkP.Id)
+	assert.Equal(t, recordState, types.DIDNOTSTART, "Should be DIDNOTSTART")
 	assert.Equal(t, fallbackAttempt, true, "fallbackAttempt should be TRUE")
 	assert.Equal(t, tallyState, types.DIDNOTSTART, "tally should be DIDNOTSTART")
-	assert.Equal(t, newNodeState, types.SUCCEED, "New node start successfully")
+	assert.Equal(t, newNodeState, types.SUCCEED, "New node should start successfully")
 	assert.Equal(t, ev.UnQueue(), event.FallbackAttempt, "Should emit FallbackAttempt")
 	assert.Equal(t, ev.UnQueue(), event.CheckPointStarted, "Should emit CheckPointStarted")
+	// vote recorded, fallback, new node is an Output
+	ev.Clear()
+	e, _ := ev.CreateEvent("Output1", []byte{0})
+	output1 := types.CreateOutput("output1", "output1 desc", e)
+	chkP4 := types.CreateCheckPoinWithChildren("test", "test desc", []*types.CheckPoint{
+		output1,
+	}, &machine, 0, 0, 0)
+	missionB, _ := types.CreateMission("missionB", "fulltext missionB", chkP4, blkc)
+	missionB.Start()
+	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Should emit MissionStarted")
+	recordState, tallyState, newNodeState, fallbackAttempt, _ = missionB.Vote([]byte{0}, "x", chkP4.Id)
+	assert.Equal(t, recordState, types.DIDNOTSTART, "Should be DIDNOTSTART")
+	assert.Equal(t, fallbackAttempt, true, "fallbackAttempt should be TRUE")
+	assert.Equal(t, tallyState, types.DIDNOTSTART, "tally should be DIDNOTSTART")
+	assert.Equal(t, newNodeState, types.SUCCEED, "New node should start successfully")
+	assert.Equal(t, ev.UnQueue(), event.MissionStopped, "Should emit MissionStoped")
+	assert.Equal(t, ev.UnQueue(), event.FallbackAttempt, "Should emit FallbackAttempt")
+	assert.Equal(t, ev.UnQueue(), event.CheckPointStarted, "Should emit CheckPointStarted")
+	assert.Equal(t, ev.UnQueue(), "Output1", "Should emit Output1")
 }
 
 func TestMissionVoteOnTally(t *testing.T) {
 	// vote recorded, no tally
+	blkc := &MockBlockchain{}
+	machine := MockVoteMachine{
+		Started:   true,
+		VoteValid: true,
+	}
+	machine2 := MockVoteMachine{
+		Started: true,
+	}
+	ev := MockEventManager{}
+	blkc.SetEventManager(&ev)
+	missionA, _ := types.CreateMission("missionA", "desc missionA", nil, blkc)
+	chkP2 := types.CreateEmptyCheckPoint("CheckPoint2", "test desc", &machine2)
+	chkP2.FallbackId = 0
+	chkP3 := types.CreateEmptyCheckPoint("CheckPoint3", "test desc", &machine2)
+	chkP2.Attach(chkP3)
+	chkP := *types.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
+		[]*types.CheckPoint{chkP2}, &machine, 0, uint64(1000), uint64(1000))
+	missionA.SetStartChkP(&chkP)
+	missionA.Start()
 	// vote recorded, tally failed
+	machine.VoteRecordSucceed = true
+	machine.ShouldTallyState = true
+	machine.TallyExecutionState = false
+	recordState, tallyState, newNodeState, fallbackAttempt, _ := missionA.Vote([]byte{0}, "x", chkP.Id)
+	assert.Equal(t, recordState, types.SUCCEED, "Vote should be succeed")
+	assert.Equal(t, tallyState, types.FAILED, "Tally should failed")
+	assert.Equal(t, newNodeState, types.DIDNOTSTART, "newNodeState should be DIDNOTSTARTED")
+	assert.Equal(t, fallbackAttempt, false, "No fallback attempt")
+	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Mission should be started")
+	assert.Equal(t, ev.UnQueue(), event.VoteRecorded, "Vote should be recorded")
+	assert.Equal(t, ev.UnQueue(), event.TallyFailed, "Tally should be failed")
+	assert.Equal(t, ev.UnQueue(), "", "Event queue should be empty")
 	// vote recorded, tally succeed, no new node
-
-	// machine.VoteRecordSucceed = true
-	// machine.ShouldTallyState = true
-	// machine.TallyExecutionState = true
-	// machine.OptionMade = types.NoOptionMade
-	// recordState, tallyState, newNodeState, _ = missionB.Vote([]byte{0}, "")
-	// assert.Equal(t, recordState, types.SUCCEED, "Vote succeed")
-	// assert.Equal(t, tallyState, types.SUCCEED, "Tally must be Succeed")
-	// assert.Equal(t, newNodeState, types.DIDNOTSTART, "Should be DIDNOTSTART")
-	// assert.Equal(t, ev.UnQueue(), event.VoteRecorded, "Should emit VoteRecorded")
-	// assert.Equal(t, ev.UnQueue(), event.TallySucceed, "Should emit TallySucceed")
-
+	machine.TallyExecutionState = true
+	machine.OptionMade = types.NoOptionMade
+	recordState, tallyState, newNodeState, fallbackAttempt, _ = missionA.Vote([]byte{0}, "x", chkP.Id)
+	assert.Equal(t, recordState, types.SUCCEED, "Vote should be succeed")
+	assert.Equal(t, tallyState, types.SUCCEED, "Tally should succeed")
+	assert.Equal(t, newNodeState, types.DIDNOTSTART, "newNodeState should be DIDNOTSTARTED")
+	assert.Equal(t, fallbackAttempt, false, "No fallback attempt")
+	assert.Equal(t, ev.UnQueue(), event.VoteRecorded, "Vote should be recorded")
+	assert.Equal(t, ev.UnQueue(), event.TallySucceed, "Tally should be succeed")
+	assert.Equal(t, ev.UnQueue(), "", "Event queue should be empty")
 	// vote recorded, tally succeed, new node failed
+	machine.TallyExecutionState = true
+	machine.OptionMade = 0
+	machine2.Started = false
+	recordState, tallyState, newNodeState, fallbackAttempt, _ = missionA.Vote([]byte{0}, "x", chkP.Id)
+	assert.Equal(t, recordState, types.SUCCEED, "Vote should be succeed")
+	assert.Equal(t, tallyState, types.SUCCEED, "Tally should succeed")
+	assert.Equal(t, newNodeState, types.FAILED, "newNodeState should be FAILED")
+	assert.Equal(t, fallbackAttempt, false, "No fallback attempt")
+	assert.Equal(t, ev.UnQueue(), event.VoteRecorded, "Vote should be recorded")
+	assert.Equal(t, ev.UnQueue(), event.TallySucceed, "Tally should be succeed")
+	assert.Equal(t, ev.UnQueue(), event.CheckPointFailToStart, "CheckPoint should fail to start")
+	assert.Equal(t, ev.UnQueue(), "", "Event queue should be empty")
 	// vote recorded, tally succeed, new node started
+	machine.TallyExecutionState = true
+	machine.OptionMade = 0
+	machine2.Started = true
+	recordState, tallyState, newNodeState, fallbackAttempt, _ = missionA.Vote([]byte{0}, "x", chkP.Id)
+	assert.Equal(t, recordState, types.SUCCEED, "Vote should be succeed")
+	assert.Equal(t, tallyState, types.SUCCEED, "Tally should succeed")
+	assert.Equal(t, newNodeState, types.SUCCEED, "newNodeState should be FAILED")
+	assert.Equal(t, fallbackAttempt, false, "No fallback attempt")
+	assert.Equal(t, ev.UnQueue(), event.VoteRecorded, "Vote should be recorded")
+	assert.Equal(t, ev.UnQueue(), event.TallySucceed, "Tally should be succeed")
+	assert.Equal(t, ev.UnQueue(), event.CheckPointStarted, "CheckPoint should be started")
+	assert.Equal(t, ev.UnQueue(), "", "Event queue should be empty")
 }
 
-func TestMissionTallyAtBlock(t *testing.T) {
+func TestBeatAtNewBlock(t *testing.T) {
 	// no tally start
 
 	// tally failed

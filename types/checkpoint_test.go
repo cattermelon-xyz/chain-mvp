@@ -20,8 +20,8 @@ type MockChkP struct {
 func (m MockChkP) getChkP() *types.CheckPoint {
 	chkp := types.CreateEmptyCheckPoint("test title", "test desc", &MockVoteMachine{
 		Started: true,
-	}, &MockBlockchain{})
-
+	})
+	chkp.FallbackId = m.FallbackId
 	if len(m.children) > 0 {
 		chkp.Attach(m.children[0])
 	}
@@ -69,7 +69,7 @@ func TestCheckPointStart(t *testing.T) {
 
 	for _, tt := range table {
 		chkP := tt.getChkP()
-
-		assert.Equal(t, types.ExportCheckPointStart(chkP, []byte{0}), tt.want, tt.name)
+		status, _ := types.ExportCheckPointStart(chkP, []byte{0})
+		assert.Equal(t, status, tt.want, tt.name)
 	}
 }

@@ -16,9 +16,10 @@ const GenesisBlock = 0
 type CheckPointStartedStatus string
 
 const (
-	ChkPFailToStart    CheckPointStartedStatus = "CheckPoint Fail To Start"
-	ChkPStarted        CheckPointStartedStatus = "CheckPoint Started"
-	OutputEventEmitted CheckPointStartedStatus = "Output Event Emitted"
+	ChkPFailToStart CheckPointStartedStatus = "CheckPoint Fail To Start"
+	ChkPStarted     CheckPointStartedStatus = "CheckPoint Started"
+	ChkPIsAnOutput  CheckPointStartedStatus = "Output Event Emitted"
+	ChkPNil         CheckPointStartedStatus = "CheckPoint is nil"
 )
 
 type CheckPoint struct {
@@ -30,7 +31,6 @@ type CheckPoint struct {
 	voteMachine      VotingMachine
 	lastBlockToVote  uint64
 	lastBlockToTally uint64
-	blockchain       Blockchain
 	outputEvent      *event.Event
 }
 
@@ -48,7 +48,7 @@ func (n *CheckPoint) Children() (c []tree.Node) {
 	return
 }
 
-func CreateEmptyCheckPoint(title string, desc string, b VotingMachine, blockchain Blockchain) *CheckPoint {
+func CreateEmptyCheckPoint(title string, desc string, b VotingMachine) *CheckPoint {
 	CheckPoint := CheckPoint{
 		Id:               utils.RandString(16),
 		Title:            title,
@@ -58,12 +58,11 @@ func CreateEmptyCheckPoint(title string, desc string, b VotingMachine, blockchai
 		FallbackId:       NoFallbackOption,
 		lastBlockToVote:  GenesisBlock,
 		lastBlockToTally: GenesisBlock,
-		blockchain:       blockchain,
 		outputEvent:      nil,
 	}
 	return &CheckPoint
 }
-func CreateCheckPoinWithChildren(name string, desc string, children []*CheckPoint, b VotingMachine, fallbackId uint64, lastBlockToVote uint64, lastBlockToTally uint64, blockchain Blockchain) *CheckPoint {
+func CreateCheckPoinWithChildren(name string, desc string, children []*CheckPoint, b VotingMachine, fallbackId uint64, lastBlockToVote uint64, lastBlockToTally uint64) *CheckPoint {
 	c := CheckPoint{
 		Id:               utils.RandString(16),
 		Title:            name,
@@ -73,7 +72,6 @@ func CreateCheckPoinWithChildren(name string, desc string, children []*CheckPoin
 		voteMachine:      b,
 		lastBlockToVote:  lastBlockToVote,
 		lastBlockToTally: lastBlockToTally,
-		blockchain:       blockchain,
 		outputEvent:      nil,
 	}
 	return &c
@@ -83,9 +81,7 @@ func CreateCheckPoinWithChildren(name string, desc string, children []*CheckPoin
 * Return an Output with EventData.
 * When this node start(), an event will be emitted.
  */
-func CreateOutput(name string, desc string, evdata event.EventData, blockchain Blockchain) *CheckPoint {
-	em := blockchain.GetEventManager()
-	ev, _ := em.CreateEvent(evdata.Name, evdata.Args)
+func CreateOutput(name string, desc string, ev *event.Event) *CheckPoint {
 	c := CheckPoint{
 		Id:               utils.RandString(16),
 		Title:            name,
@@ -95,7 +91,6 @@ func CreateOutput(name string, desc string, evdata event.EventData, blockchain B
 		voteMachine:      nil,
 		lastBlockToVote:  GenesisBlock,
 		lastBlockToTally: GenesisBlock,
-		blockchain:       blockchain,
 		outputEvent:      ev,
 	}
 	return &c
@@ -126,30 +121,37 @@ func (this *CheckPoint) Get(idx uint64) *CheckPoint {
 	return nil
 }
 
+func (this *CheckPoint) GetOutputEvent() *event.Event {
+	return this.outputEvent
+}
+
 /**
 * Return CheckPointStartedStatus: {OutputEventEmitted, ChkPFailToStart, ChkPStarted}
  */
-func (this *CheckPoint) start(lastTalliedResult []byte) CheckPointStartedStatus {
+func (this *CheckPoint) start(lastTalliedResult []byte) (CheckPointStartedStatus, *event.Event) {
 	// an Output or a CheckPoint with votingMachine?
+	// log.Printf("%s\n", this.Title)
 	if this.outputEvent != nil {
-		this.blockchain.GetEventManager().Emit(this.outputEvent.Id)
-		return OutputEventEmitted
+		return ChkPIsAnOutput, this.outputEvent
 	} else { // a CheckPoint with votingMachine
 		if this.children == nil {
-			return ChkPFailToStart
+			// log.Printf("func (this *CheckPoint) start([]byte): this.children is nil\n")
+			return ChkPFailToStart, nil
 		}
 		if len(this.children) == 0 || this.FallbackId == NoFallbackOption {
-			return ChkPFailToStart
+			// log.Printf("func (this *CheckPoint) start([]byte): len(this.children) == 0 or this.FallbackId == NoFallbackOption\n")
+			return ChkPFailToStart, nil
 		}
 	}
 	if this.voteMachine == nil {
-		return ChkPFailToStart
+		// log.Printf("func (this *CheckPoint) start([]byte): this.voteMachine is nil\n")
+		return ChkPFailToStart, nil
 	}
 	started := this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)), this.FallbackId)
 	if started == true {
-		return ChkPStarted
+		return ChkPStarted, nil
 	}
-	return ChkPFailToStart
+	return ChkPFailToStart, nil
 }
 func (this *CheckPoint) isValidChoice(option []byte) bool {
 	if this.voteMachine.IsStarted() == false {
@@ -164,13 +166,14 @@ func (this *CheckPoint) isValidChoice(option []byte) bool {
 * Returns: recordStatus ExecutionStatus, tallyStatus ExecutionStatus, newChkPStatus ExecutionStatus, fallbackAttempt bool
 * TODO: what if we want to hide the voter's option from validator?
  */
-func (this *CheckPoint) vote(tr *Mission, who string, input []byte) (ExecutionStatus, ExecutionStatus, ExecutionStatus, bool) {
+func (this *CheckPoint) vote(tr *Mission, who string, input []byte) (ExecutionStatus, ExecutionStatus, ExecutionStatus, bool, *event.Event) {
 	var recordStatus ExecutionStatus = DIDNOTSTART
 	var tallyStatus ExecutionStatus = DIDNOTSTART
 	var newChkPStatus ExecutionStatus = DIDNOTSTART
+	var ev *event.Event = nil
 	fallbackAttempt := false
 	// check for fallback
-	fallbackAttempt, newChkPStatus = fallback(tr, this.voteMachine, this.FallbackId)
+	fallbackAttempt, newChkPStatus, ev = fallback(tr, this.voteMachine, this.FallbackId)
 	if fallbackAttempt == false {
 		if this.voteMachine.Record(who, input) == true {
 			recordStatus = SUCCEED
@@ -179,10 +182,10 @@ func (this *CheckPoint) vote(tr *Mission, who string, input []byte) (ExecutionSt
 		}
 		// then check for tally
 		if fallbackAttempt == false && this.voteMachine.ShouldTally() == true {
-			tallyStatus, newChkPStatus = tally(tr, this.voteMachine)
+			tallyStatus, newChkPStatus, ev = tally(tr, this.voteMachine)
 		}
 	}
-	return recordStatus, tallyStatus, newChkPStatus, fallbackAttempt
+	return recordStatus, tallyStatus, newChkPStatus, fallbackAttempt, ev
 }
 
 /**
@@ -190,23 +193,25 @@ func (this *CheckPoint) vote(tr *Mission, who string, input []byte) (ExecutionSt
 * Args: tr *Mission, m VotingMachine, input []byte
 * Return: tallyStatus ExecutionStatus, newChkPoinStatus ExecutionStatus
  */
-func tally(tr *Mission, m VotingMachine) (ExecutionStatus, ExecutionStatus) {
+func tally(mission *Mission, m VotingMachine) (ExecutionStatus, ExecutionStatus, *event.Event) {
 	_tallyStatus, _, tallyResult, selectedOption := m.Tally()
 	_newChkPointStatus := ChkPFailToStart
 	tallyStatus := FAILED
 	newChkPointStatus := DIDNOTSTART
+	var outputEvent *event.Event = nil
 	if _tallyStatus == true {
 		tallyStatus = SUCCEED
 		if selectedOption != NoOptionMade {
-			_newChkPointStatus, _ = tr.Choose(selectedOption, tallyResult)
-			if _newChkPointStatus == ChkPStarted {
+			_newChkPointStatus, outputEvent = mission.Choose(selectedOption, tallyResult)
+			// fmt.Println("tally: ", _newChkPointStatus)
+			if _newChkPointStatus == ChkPStarted || _newChkPointStatus == ChkPIsAnOutput {
 				newChkPointStatus = SUCCEED
 			} else {
 				newChkPointStatus = FAILED
 			}
 		}
 	}
-	return tallyStatus, newChkPointStatus
+	return tallyStatus, newChkPointStatus, outputEvent
 }
 
 /**
@@ -214,20 +219,22 @@ func tally(tr *Mission, m VotingMachine) (ExecutionStatus, ExecutionStatus) {
 * Args: tr *Mission, m VotingMachine, fallbackId uint64, input []byte
 * Return: fallbackAttempt bool, newChkPointStatus ExecutionStatus
  */
-func fallback(tr *Mission, m VotingMachine, fallbackId uint64) (bool, ExecutionStatus) {
-	currentBlk := tr.currentChkP.blockchain.GetCurrentBlockNumber()
-	lastBlkVote := tr.currentChkP.lastBlockToVote
-	lastBlkTally := tr.currentChkP.lastBlockToTally
+func fallback(mission *Mission, m VotingMachine, fallbackId uint64) (bool, ExecutionStatus, *event.Event) {
+	currentBlk := mission.blockchain.GetCurrentBlockNumber()
+	lastBlkVote := mission.currentChkP.lastBlockToVote
+	lastBlkTally := mission.currentChkP.lastBlockToTally
 	tallyResult, selectedOption := m.GetTallyResult()
 	newChkPointStatus := DIDNOTSTART
+	var ev *event.Event = nil
 	if currentBlk > lastBlkVote && currentBlk > lastBlkTally && selectedOption == NoOptionMade {
-		_newChkPointStatus, _ := tr.Choose(fallbackId, tallyResult)
-		if _newChkPointStatus == ChkPStarted {
+		_newChkPointStatus, ev := mission.Choose(fallbackId, tallyResult)
+		// fmt.Println("fallback: ", _newChkPointStatus)
+		if _newChkPointStatus == ChkPStarted || _newChkPointStatus == ChkPIsAnOutput {
 			newChkPointStatus = SUCCEED
 		} else {
 			newChkPointStatus = FAILED
 		}
-		return true, newChkPointStatus
+		return true, newChkPointStatus, ev
 	}
-	return false, newChkPointStatus
+	return false, newChkPointStatus, ev
 }

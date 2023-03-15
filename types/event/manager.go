@@ -55,7 +55,7 @@ type EventData struct {
 
 type Event struct {
 	Id           string
-	data         EventData
+	Data         EventData
 	observerList map[string]Observer
 }
 
@@ -87,11 +87,11 @@ func (this *eventManagerStruct) Emit(id string) {
 	if e != nil {
 		if e.observerList != nil {
 			for _, o := range e.observerList {
-				o.Update(e.data.Args)
+				o.Update(e.Data.Args)
 			}
 		}
 		// log.Println("Emit ", id)
-		this.Broadcast() <- e.data
+		this.Broadcast() <- e.Data
 		delete(this.registeredEvent, id)
 	}
 }
@@ -103,7 +103,7 @@ func (this *eventManagerStruct) Emit(id string) {
 func (this *eventManagerStruct) CreateEvent(name string, args []byte) (*Event, string) {
 	id := utils.RandString(8)
 	e := Event{
-		data: EventData{Name: name, Args: args}, Id: id,
+		Data: EventData{Name: name, Args: args}, Id: id,
 	}
 	this.registeredEvent[id] = &e
 	return &e, id

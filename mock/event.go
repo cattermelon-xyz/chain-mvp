@@ -8,6 +8,10 @@ type MockEventManager struct {
 	queue []string
 }
 
+func (this *MockEventManager) GetQueue() []string {
+	return this.queue
+}
+
 func (this *MockEventManager) Queue(ev string) {
 	if this.queue == nil {
 		this.queue = make([]string, 0)
@@ -29,7 +33,10 @@ func (this MockEventManager) Clear() {
 	return
 }
 func (this *MockEventManager) CreateEvent(name string, args []byte) (*event.Event, string) {
-	return nil, ""
+	return &event.Event{
+		Id:   name,
+		Data: event.EventData{Name: name, Args: args},
+	}, name
 }
 func (this *MockEventManager) DeleteEvent(eventId string) (bool, error) {
 	return false, nil
@@ -41,6 +48,7 @@ func (this *MockEventManager) Deregister(eventId string, oId string) (bool, erro
 	return false, nil
 }
 func (this *MockEventManager) Emit(id string) {
+	this.Queue(id)
 }
 func (this *MockEventManager) Broadcast() chan event.EventData {
 	return nil
