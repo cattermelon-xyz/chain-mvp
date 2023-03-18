@@ -45,4 +45,7 @@ type VotingMachine interface {
 
 	// Return reveal result, using key to decrypt option then tally
 	Reveal(key []byte) bool
+
+	// Marshal the data
+	// Resurrect
 }

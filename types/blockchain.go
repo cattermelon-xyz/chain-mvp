@@ -18,6 +18,8 @@ type Blockchain interface {
 
 type BlockData struct {
 	CurrentBlockNumber uint64
+	BlockHash          string
+	Transactions       []Transaction
 }
 
 var globalBlockchain = blockchainStruct{

@@ -17,10 +17,9 @@ const (
 )
 
 type Mission struct {
-	id       string
+	id       Address
 	Title    string
 	Fulltext string
-	Id       Address
 	Owner    Address
 
 	blockchain  Blockchain
@@ -31,14 +30,44 @@ type Mission struct {
 }
 
 var Missions = make([]*Mission, 0)
+var cachedMissions = make(map[Address]*Mission)
 
-func CreateMission(title string, fulltext string, start *CheckPoint, b Blockchain) (*Mission, string) {
+func GetMissionById(id Address) (*Mission, error) {
+	cached := cachedMissions[id] // cache hit
+	if cached != nil {
+		for _, m := range Missions {
+			if m.id == id {
+				cachedMissions[id] = m
+				return m, nil
+			}
+		}
+	}
+	return nil, errors.New(string(id) + " not found")
+}
+
+var CheckPoints = make([]*CheckPoint, 0)
+var cachedCheckPoints = make(map[string]*CheckPoint)
+
+func GetCheckPointById(id string) *CheckPoint {
+	cached := cachedCheckPoints[id] // cache hit
+	if cached != nil {
+		for _, chkp := range CheckPoints {
+			if chkp.Id == id {
+				cachedCheckPoints[id] = chkp
+				return chkp
+			}
+		}
+	}
+	return nil
+}
+
+func CreateMission(title string, fulltext string, b Blockchain) (*Mission, string) {
 	id := utils.RandString(16)
 	i := Mission{
-		id:          id,
+		id:          Address(id),
 		Title:       title,
 		Fulltext:    fulltext,
-		startChkP:   start,
+		startChkP:   nil,
 		currentChkP: nil,
 		isStarted:   false,
 		isActive:    false,
@@ -48,20 +77,46 @@ func CreateMission(title string, fulltext string, start *CheckPoint, b Blockchai
 	return &i, id
 }
 
-func GetMission(id string) (*Mission, error) {
-	for _, m := range Missions {
-		if m.id == id {
-			return m, nil
-		}
+func (mission *Mission) CreateEmptyCheckPoint(title string, desc string, b VotingMachine) *CheckPoint {
+	CheckPoint := CheckPoint{
+		Id:               utils.RandString(16),
+		Title:            title,
+		Description:      desc,
+		children:         []*CheckPoint{},
+		voteMachine:      b,
+		FallbackId:       NoFallbackOption,
+		lastBlockToVote:  GenesisBlock,
+		lastBlockToTally: GenesisBlock,
+		outputEvent:      nil,
+		mission:          mission,
 	}
-	return nil, errors.New(id + " not found")
+	return &CheckPoint
+}
+func (mission *Mission) CreateCheckPoinWithChildren(name string, desc string, children []*CheckPoint, b VotingMachine, fallbackId uint64, lastBlockToVote uint64, lastBlockToTally uint64) *CheckPoint {
+	c := CheckPoint{
+		Id:               utils.RandString(16),
+		Title:            name,
+		Description:      desc,
+		FallbackId:       fallbackId,
+		children:         children,
+		voteMachine:      b,
+		lastBlockToVote:  lastBlockToVote,
+		lastBlockToTally: lastBlockToTally,
+		outputEvent:      nil,
+		mission:          mission,
+	}
+	return &c
+}
+
+func (this *Mission) GetId() Address {
+	return this.id
 }
 
 // TODO: is it safe to do this? should we check all the nodes and events (observer)?
 func DeleteMission(id string) bool {
 	found := -1
 	for idx, m := range Missions {
-		if m.id == id {
+		if string(m.id) == id {
 			found = idx
 		}
 	}
@@ -72,10 +127,12 @@ func DeleteMission(id string) bool {
 	}
 	return false
 }
-func (this *Mission) SetStartChkP(chkP *CheckPoint) {
+func (this *Mission) SetStartChkP(chkPId string) {
+	chkP := GetCheckPointById(chkPId)
 	this.startChkP = chkP
 }
-func (this *Mission) SetCurrentChkP(chkP *CheckPoint) {
+func (this *Mission) SetCurrentChkP(chkPId string) {
+	chkP := GetCheckPointById(chkPId)
 	this.currentChkP = chkP
 }
 func (this *Mission) CurrentChkP() *CheckPoint {
@@ -93,14 +150,14 @@ func (this *Mission) StartChkP() *CheckPoint {
 * Function Start
  */
 func (this *Mission) Start() bool {
-	if this.isStarted == false {
+	if this.isStarted == false && this.startChkP != nil {
 		nodeStarted, outputEvent := this.startChkP.start(nil)
 		if nodeStarted == ChkPStarted {
 			this.isStarted = true
 			this.isActive = true
-			this.SetCurrentChkP(this.startChkP)
+			this.SetCurrentChkP(this.startChkP.Id)
 			ev := this.blockchain.GetEventManager()
-			ev.EmitMissionStarted(this.id)
+			ev.EmitMissionStarted(string(this.id))
 			if outputEvent != nil {
 				ev.Emit(outputEvent.Id)
 			}
@@ -116,7 +173,7 @@ func (this *Mission) Stop() {
 		this.isStarted = false
 		this.isActive = false
 		ev := this.blockchain.GetEventManager()
-		ev.EmitMissionStopped(this.id)
+		ev.EmitMissionStopped(string(this.id))
 	}
 }
 
@@ -124,7 +181,7 @@ func (this *Mission) Pause() {
 	if this.isActive == true && this.isStarted == true {
 		this.isActive = false
 		ev := this.blockchain.GetEventManager()
-		ev.EmitMissionPaused(this.id)
+		ev.EmitMissionPaused(string(this.id))
 	}
 }
 
@@ -132,10 +189,10 @@ func (this *Mission) Resume() (bool, error) {
 	if this.isStarted == true {
 		this.isActive = true
 		ev := this.blockchain.GetEventManager()
-		ev.EmitMissionResumed(this.id)
+		ev.EmitMissionResumed(string(this.id))
 		return true, nil
 	}
-	return false, errors.New("func (this *Mission) Resume()" + this.id + " is stopped, can not start again")
+	return false, errors.New("func (this *Mission) Resume()" + string(this.id) + " is stopped, can not start again")
 }
 
 func (this *Mission) PrintFromStart() {
@@ -190,28 +247,29 @@ func (this *Mission) Vote(option []byte, who string, checkPointId string) (Execu
 	lastChkPointId := this.currentChkP.Id
 	if this.IsValidChoice(option) == true && this.currentChkP.voteMachine.IsStarted() == true && checkPointId == this.currentChkP.Id {
 		// log.Printf("In %s, %s vote %s\n", this.currentChkP.Data(), who, option)
-		voteRecordStatus, tallyStatus, newChkPointStatus, fallbackAttempt, outputEvent = this.currentChkP.vote(this, who, option)
+		voteRecordStatus, tallyStatus, newChkPointStatus, fallbackAttempt, outputEvent = this.currentChkP.vote(who, option)
 	} else {
 		voteRecordStatus = FAILED
 	}
+	mIdStr := string(this.id)
 	if voteRecordStatus == SUCCEED {
-		ev.EmitVoteRecorded(this.id, who)
+		ev.EmitVoteRecorded(mIdStr, who)
 	} else if voteRecordStatus == FAILED {
-		ev.EmitVoteFailToRecord(this.id, who)
+		ev.EmitVoteFailToRecord(mIdStr, who)
 	}
 	if tallyStatus == SUCCEED {
-		ev.EmitTallySucceed(this.id, lastChkPointId)
+		ev.EmitTallySucceed(mIdStr, lastChkPointId)
 	} else if tallyStatus == FAILED {
-		ev.EmitTallyFailed(this.id, lastChkPointId)
+		ev.EmitTallyFailed(mIdStr, lastChkPointId)
 	}
 	if fallbackAttempt == true {
-		ev.EmitFallbackAttempt(this.id, lastChkPointId)
+		ev.EmitFallbackAttempt(mIdStr, lastChkPointId)
 	}
 	if newChkPointStatus == SUCCEED {
-		ev.EmitCheckPointStarted(this.id, lastChkPointId, this.currentChkP.Id)
+		ev.EmitCheckPointStarted(mIdStr, lastChkPointId, this.currentChkP.Id)
 	} else if newChkPointStatus == FAILED {
 		_, selectedOption := this.currentChkP.voteMachine.GetTallyResult()
-		ev.EmitCheckPointFailToStart(this.id, lastChkPointId, selectedOption)
+		ev.EmitCheckPointFailToStart(mIdStr, lastChkPointId, selectedOption)
 	}
 	if outputEvent != nil {
 		ev.Emit(outputEvent.Id)
@@ -234,29 +292,30 @@ func (this *Mission) BeatAtNewBlock() (ExecutionStatus, bool, ExecutionStatus, *
 		return tallyStatus, fallbackAttempt, nodeStarted, outputEvent
 	}
 	lastChkPointId := this.currentChkP.Id
+	mIdStr := string(this.id)
 	if this.currentChkP.voteMachine.ShouldTally() == true {
 		tallyStatus, newChkPoinStatus, outputEvent = tally(this, this.currentChkP.voteMachine)
 		if tallyStatus == SUCCEED {
-			ev.EmitTallySucceed(this.id, lastChkPointId)
+			ev.EmitTallySucceed(mIdStr, lastChkPointId)
 		} else {
-			ev.EmitTallyFailed(this.id, lastChkPointId)
+			ev.EmitTallyFailed(mIdStr, lastChkPointId)
 		}
 		if newChkPoinStatus == SUCCEED {
-			ev.EmitCheckPointStarted(this.id, lastChkPointId, this.currentChkP.Id)
+			ev.EmitCheckPointStarted(mIdStr, lastChkPointId, this.currentChkP.Id)
 		} else if newChkPoinStatus == FAILED {
 			_, selectedOption := this.currentChkP.voteMachine.GetTallyResult()
-			ev.EmitCheckPointFailToStart(this.id, lastChkPointId, selectedOption)
+			ev.EmitCheckPointFailToStart(mIdStr, lastChkPointId, selectedOption)
 		}
 	} else {
 		fallbackAttempt, nodeStarted, outputEvent = fallback(this, this.currentChkP.voteMachine, this.currentChkP.FallbackId)
 		if fallbackAttempt == true {
-			ev.EmitFallbackAttempt(this.id, lastChkPointId)
+			ev.EmitFallbackAttempt(mIdStr, lastChkPointId)
 		}
 		if nodeStarted == FAILED {
 			_, selectedOption := this.currentChkP.voteMachine.GetTallyResult()
-			ev.EmitCheckPointFailToStart(this.id, lastChkPointId, selectedOption)
+			ev.EmitCheckPointFailToStart(mIdStr, lastChkPointId, selectedOption)
 		} else if nodeStarted == SUCCEED {
-			ev.EmitCheckPointStarted(this.id, lastChkPointId, this.currentChkP.Id)
+			ev.EmitCheckPointStarted(mIdStr, lastChkPointId, this.currentChkP.Id)
 		}
 	}
 	return tallyStatus, fallbackAttempt, nodeStarted, outputEvent
@@ -267,4 +326,16 @@ func (this *Mission) BeatAtNewBlock() (ExecutionStatus, bool, ExecutionStatus, *
  */
 func (this *Mission) Reveal(priK []byte) {
 	this.currentChkP.voteMachine.Reveal(priK)
+}
+
+/**
+* Marshal the Mission data
+ */
+func (this *Mission) marshal() MissionData {
+	// go through the tree to take all checkpoint
+	return MissionData{}
+}
+
+func (this *Mission) unmarshalCheckPoint(data CheckPointData) *CheckPoint {
+	return &CheckPoint{}
 }

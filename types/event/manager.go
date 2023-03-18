@@ -22,7 +22,7 @@ const (
 type eventManagerStruct struct {
 	initialized     bool
 	registeredEvent map[string]*Event
-	broadcast       chan EventData
+	broadcast       chan Event
 }
 
 var globalEventManager = eventManagerStruct{
@@ -45,17 +45,13 @@ type EventManager interface {
 	DeleteEvent(string) (bool, error)
 	Register(string, Observer) (string, error)
 	Deregister(string, string) (bool, error)
-	Broadcast() chan EventData
-}
-
-type EventData struct {
-	Name string
-	Args []byte
+	Broadcast() chan Event
 }
 
 type Event struct {
 	Id           string
-	Data         EventData
+	Name         string
+	Args         []byte
 	observerList map[string]Observer
 }
 
@@ -67,13 +63,13 @@ func GetEventManager() EventManager {
 		globalEventManager = eventManagerStruct{
 			initialized:     true,
 			registeredEvent: make(map[string]*Event),
-			broadcast:       make(chan EventData),
+			broadcast:       make(chan Event),
 		}
 	}
 	return EventManager(&globalEventManager)
 }
 
-func (this *eventManagerStruct) Broadcast() chan EventData {
+func (this *eventManagerStruct) Broadcast() chan Event {
 	return this.broadcast
 }
 
@@ -87,11 +83,15 @@ func (this *eventManagerStruct) Emit(id string) {
 	if e != nil {
 		if e.observerList != nil {
 			for _, o := range e.observerList {
-				o.Update(e.Data.Args)
+				o.Update(e.Args)
 			}
 		}
 		// log.Println("Emit ", id)
-		this.Broadcast() <- e.Data
+		this.Broadcast() <- Event{
+			Id:   e.Id,
+			Name: e.Name,
+			Args: e.Args,
+		}
 		delete(this.registeredEvent, id)
 	}
 }
@@ -103,8 +103,16 @@ func (this *eventManagerStruct) Emit(id string) {
 func (this *eventManagerStruct) CreateEvent(name string, args []byte) (*Event, string) {
 	id := utils.RandString(8)
 	e := Event{
-		Data: EventData{Name: name, Args: args}, Id: id,
+		Id:   id,
+		Name: name,
+		Args: args,
 	}
 	this.registeredEvent[id] = &e
 	return &e, id
 }
+
+func (this *Event) marshal() {
+
+}
+
+func (this *eventManagerStruct) unmarshalEvent() {}

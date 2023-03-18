@@ -35,7 +35,8 @@ func (this MockEventManager) Clear() {
 func (this *MockEventManager) CreateEvent(name string, args []byte) (*event.Event, string) {
 	return &event.Event{
 		Id:   name,
-		Data: event.EventData{Name: name, Args: args},
+		Name: name,
+		Args: args,
 	}, name
 }
 func (this *MockEventManager) DeleteEvent(eventId string) (bool, error) {
@@ -50,7 +51,7 @@ func (this *MockEventManager) Deregister(eventId string, oId string) (bool, erro
 func (this *MockEventManager) Emit(id string) {
 	this.Queue(id)
 }
-func (this *MockEventManager) Broadcast() chan event.EventData {
+func (this *MockEventManager) Broadcast() chan event.Event {
 	return nil
 }
 func (this *MockEventManager) EmitMissionStarted(missionId string) {

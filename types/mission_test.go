@@ -13,14 +13,16 @@ func TestMissionStateMachine(t *testing.T) {
 	alwaysStartMachine := MockVoteMachine{
 		Started: true,
 	}
-	chkP := types.CreateEmptyCheckPoint("test", "test desc", &alwaysStartMachine)
-	chkP.FallbackId = 1
-	chkP.Attach(&types.CheckPoint{})
 	blkc := &MockBlockchain{}
 	ev := MockEventManager{}
 	blkc.SetEventManager(&ev)
-	missionA, _ := types.CreateMission("missionA", "test", chkP, blkc)
-	missionA.SetStartChkP(chkP)
+	missionA, _ := types.CreateMission("missionA", "test", blkc)
+	chkP := missionA.CreateEmptyCheckPoint("test", "test desc", &alwaysStartMachine)
+	chkP.FallbackId = 1
+	chkp1 := missionA.CreateEmptyCheckPoint("test2", "test desc 2", &alwaysStartMachine)
+	chkP.Attach(chkp1.Id)
+
+	missionA.SetStartChkP(chkP.Id)
 	missionA.Start()
 	assert.Equal(t, missionA.Start(), true, "Mission started should return true")
 	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Event MissionStarted must be dispatched")
@@ -37,17 +39,18 @@ func TestMissionStateMachine(t *testing.T) {
 }
 
 func TestMissionVoteOnRecord(t *testing.T) {
-	machine := MockVoteMachine{
-		Started: true,
-	}
-	chkP := types.CreateEmptyCheckPoint("test", "test desc", &machine)
-	chkP.FallbackId = 0
-	chkP.Attach(&types.CheckPoint{})
 	ev := MockEventManager{}
 	blkc := &MockBlockchain{}
 	blkc.SetEventManager(&ev)
-	missionA, _ := types.CreateMission("missionA", "test", chkP, blkc)
-	missionA.SetStartChkP(chkP)
+	machine := MockVoteMachine{
+		Started: true,
+	}
+	missionA, _ := types.CreateMission("missionA", "test", blkc)
+	chkP := missionA.CreateEmptyCheckPoint("test", "test desc", &machine)
+	chkP.FallbackId = 0
+	chkP2 := missionA.CreateEmptyCheckPoint("test2", "test desc 2", &machine)
+	chkP.Attach(chkP2.Id)
+	missionA.SetStartChkP(chkP.Id)
 
 	var recordState, tallyState, newNodeState types.ExecutionStatus
 	var fallbackAttemp bool
@@ -87,9 +90,9 @@ func TestMissionVoteOnRecord(t *testing.T) {
 		ShouldTallyState: false,
 	}
 	blkc.SetCurrentBlockNumber(100)
-	chkP = types.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
+	missionB, _ := types.CreateMission("missionB", "desc", blkc)
+	chkP = missionB.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
 		[]*types.CheckPoint{{}}, &machine, 2, uint64(1000), uint64(1000))
-	missionB, _ := types.CreateMission("missionB", "desc", chkP, blkc)
 	missionB.Start()
 	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Mission should Started")
 	recordState, _, _, _, _ = missionB.Vote([]byte{0}, "x", chkP.Id)
@@ -123,14 +126,14 @@ func TestMissionVoteOnFallback(t *testing.T) {
 	}
 	ev := MockEventManager{}
 	blkc.SetEventManager(&ev)
-	missionA, _ := types.CreateMission("missionA", "desc missionA", nil, blkc)
-	chkP2 := types.CreateEmptyCheckPoint("CheckPoint2", "test desc", &machine2)
+	missionA, _ := types.CreateMission("missionA", "desc missionA", blkc)
+	chkP2 := missionA.CreateEmptyCheckPoint("CheckPoint2", "test desc", &machine2)
 	chkP2.FallbackId = 0
-	chkP3 := types.CreateEmptyCheckPoint("CheckPoint3", "test desc", &machine2)
-	chkP2.Attach(chkP3)
-	chkP := *types.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
+	chkP3 := missionA.CreateEmptyCheckPoint("CheckPoint3", "test desc", &machine2)
+	chkP2.Attach(chkP3.Id)
+	chkP := missionA.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
 		[]*types.CheckPoint{chkP2}, &machine, 0, uint64(1000), uint64(1000))
-	missionA.SetStartChkP(&chkP)
+	missionA.SetStartChkP(chkP.Id)
 	missionA.Start()
 	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Mission should Started")
 	var recordState, tallyState, newNodeState types.ExecutionStatus
@@ -149,9 +152,9 @@ func TestMissionVoteOnFallback(t *testing.T) {
 	assert.Equal(t, ev.UnQueue(), event.CheckPointFailToStart, "Should emit CheckPointFailToStart")
 	// vote recorded, fallback, new node started
 	machine2.Started = true
-	chkP = *types.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
+	chkP = missionA.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
 		[]*types.CheckPoint{chkP2}, &machine, 0, uint64(1000), uint64(1000)) // reset
-	missionA.SetCurrentChkP(&chkP)
+	missionA.SetCurrentChkP(chkP.Id)
 	recordState, tallyState, newNodeState, fallbackAttempt, _ = missionA.Vote([]byte{0}, "x", chkP.Id)
 	assert.Equal(t, recordState, types.DIDNOTSTART, "Should be DIDNOTSTART")
 	assert.Equal(t, fallbackAttempt, true, "fallbackAttempt should be TRUE")
@@ -161,12 +164,13 @@ func TestMissionVoteOnFallback(t *testing.T) {
 	assert.Equal(t, ev.UnQueue(), event.CheckPointStarted, "Should emit CheckPointStarted")
 	// vote recorded, fallback, new node is an Output
 	ev.Clear()
+	missionB, _ := types.CreateMission("missionB", "fulltext missionB", blkc)
 	e, _ := ev.CreateEvent("Output1", []byte{0})
-	output1 := types.CreateOutput("output1", "output1 desc", e)
-	chkP4 := types.CreateCheckPoinWithChildren("test", "test desc", []*types.CheckPoint{
+	output1 := missionB.CreateOutput("output1", "output1 desc", e)
+	chkP4 := missionB.CreateCheckPoinWithChildren("test", "test desc", []*types.CheckPoint{
 		output1,
 	}, &machine, 0, 0, 0)
-	missionB, _ := types.CreateMission("missionB", "fulltext missionB", chkP4, blkc)
+	missionB.SetStartChkP(chkP4.Id)
 	missionB.Start()
 	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Should emit MissionStarted")
 	recordState, tallyState, newNodeState, fallbackAttempt, _ = missionB.Vote([]byte{0}, "x", chkP4.Id)
@@ -192,14 +196,14 @@ func TestMissionVoteOnTally(t *testing.T) {
 	}
 	ev := MockEventManager{}
 	blkc.SetEventManager(&ev)
-	missionA, _ := types.CreateMission("missionA", "desc missionA", nil, blkc)
-	chkP2 := types.CreateEmptyCheckPoint("CheckPoint2", "test desc", &machine2)
+	missionA, _ := types.CreateMission("missionA", "desc missionA", blkc)
+	chkP2 := missionA.CreateEmptyCheckPoint("CheckPoint2", "test desc", &machine2)
 	chkP2.FallbackId = 0
-	chkP3 := types.CreateEmptyCheckPoint("CheckPoint3", "test desc", &machine2)
-	chkP2.Attach(chkP3)
-	chkP := *types.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
+	chkP3 := missionA.CreateEmptyCheckPoint("CheckPoint3", "test desc", &machine2)
+	chkP2.Attach(chkP3.Id)
+	chkP := missionA.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
 		[]*types.CheckPoint{chkP2}, &machine, 0, uint64(1000), uint64(1000))
-	missionA.SetStartChkP(&chkP)
+	missionA.SetStartChkP(chkP.Id)
 	missionA.Start()
 	// vote recorded, tally failed
 	machine.VoteRecordSucceed = true

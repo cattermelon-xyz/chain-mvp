@@ -32,6 +32,7 @@ type CheckPoint struct {
 	lastBlockToVote  uint64
 	lastBlockToTally uint64
 	outputEvent      *event.Event
+	mission          *Mission
 }
 
 // return something that is printable
@@ -48,40 +49,11 @@ func (n *CheckPoint) Children() (c []tree.Node) {
 	return
 }
 
-func CreateEmptyCheckPoint(title string, desc string, b VotingMachine) *CheckPoint {
-	CheckPoint := CheckPoint{
-		Id:               utils.RandString(16),
-		Title:            title,
-		Description:      desc,
-		children:         []*CheckPoint{},
-		voteMachine:      b,
-		FallbackId:       NoFallbackOption,
-		lastBlockToVote:  GenesisBlock,
-		lastBlockToTally: GenesisBlock,
-		outputEvent:      nil,
-	}
-	return &CheckPoint
-}
-func CreateCheckPoinWithChildren(name string, desc string, children []*CheckPoint, b VotingMachine, fallbackId uint64, lastBlockToVote uint64, lastBlockToTally uint64) *CheckPoint {
-	c := CheckPoint{
-		Id:               utils.RandString(16),
-		Title:            name,
-		Description:      desc,
-		FallbackId:       fallbackId,
-		children:         children,
-		voteMachine:      b,
-		lastBlockToVote:  lastBlockToVote,
-		lastBlockToTally: lastBlockToTally,
-		outputEvent:      nil,
-	}
-	return &c
-}
-
 /**
-* Return an Output with EventData.
+* Return an Output with Eventa.
 * When this node start(), an event will be emitted.
  */
-func CreateOutput(name string, desc string, ev *event.Event) *CheckPoint {
+func (mission *Mission) CreateOutput(name string, desc string, ev *event.Event) *CheckPoint {
 	c := CheckPoint{
 		Id:               utils.RandString(16),
 		Title:            name,
@@ -92,12 +64,18 @@ func CreateOutput(name string, desc string, ev *event.Event) *CheckPoint {
 		lastBlockToVote:  GenesisBlock,
 		lastBlockToTally: GenesisBlock,
 		outputEvent:      ev,
+		mission:          mission,
 	}
 	return &c
 }
-func (this *CheckPoint) Attach(child *CheckPoint) *CheckPoint {
+func (this *CheckPoint) Attach(childId string) *CheckPoint {
+	child := GetCheckPointById(childId)
 	if this.children == nil {
 		this.children = make([]*CheckPoint, 0)
+	}
+	if this.mission != child.mission {
+		log.Println("Mismatch mission id")
+		return nil
 	}
 	this.children = append(this.children, child)
 	return child
@@ -121,6 +99,10 @@ func (this *CheckPoint) Get(idx uint64) *CheckPoint {
 	return nil
 }
 
+func (this *CheckPoint) GetMissionId() Address {
+	return this.mission.id
+}
+
 func (this *CheckPoint) GetOutputEvent() *event.Event {
 	return this.outputEvent
 }
@@ -130,21 +112,21 @@ func (this *CheckPoint) GetOutputEvent() *event.Event {
  */
 func (this *CheckPoint) start(lastTalliedResult []byte) (CheckPointStartedStatus, *event.Event) {
 	// an Output or a CheckPoint with votingMachine?
-	// log.Printf("%s\n", this.Title)
+	log.Printf("%s\n", this.Title)
 	if this.outputEvent != nil {
 		return ChkPIsAnOutput, this.outputEvent
 	} else { // a CheckPoint with votingMachine
 		if this.children == nil {
-			// log.Printf("func (this *CheckPoint) start([]byte): this.children is nil\n")
+			log.Printf("func (this *CheckPoint) start([]byte): this.children is nil\n")
 			return ChkPFailToStart, nil
 		}
 		if len(this.children) == 0 || this.FallbackId == NoFallbackOption {
-			// log.Printf("func (this *CheckPoint) start([]byte): len(this.children) == 0 or this.FallbackId == NoFallbackOption\n")
+			log.Printf("func (this *CheckPoint) start([]byte): len(this.children) == 0 or this.FallbackId == NoFallbackOption\n")
 			return ChkPFailToStart, nil
 		}
 	}
 	if this.voteMachine == nil {
-		// log.Printf("func (this *CheckPoint) start([]byte): this.voteMachine is nil\n")
+		log.Printf("func (this *CheckPoint) start([]byte): this.voteMachine is nil\n")
 		return ChkPFailToStart, nil
 	}
 	started := this.voteMachine.Start(lastTalliedResult, uint64(len(this.children)), this.FallbackId)
@@ -160,20 +142,63 @@ func (this *CheckPoint) isValidChoice(option []byte) bool {
 	return this.voteMachine.ValidateVote(option)
 }
 
+/*
+Id               string
+Title            string
+Description      string
+FallbackId       uint64
+ChildrenId       []string
+LastBlockToVote  uint64
+LastBlockToTally uint64
+OutputEventId    string
+OutputEventName  string
+OutputEventArgs  []byte
+VoteMachineType  string
+VoteMachine      []byte
+*/
+func (this *CheckPoint) marshal() CheckPointData {
+	ChildrenId := make([]string, 0)
+	if this.children != nil {
+		for _, chkp := range this.children {
+			ChildrenId = append(ChildrenId, chkp.Id)
+		}
+	}
+	OutputEventId := ""
+	OutputEventName := ""
+	OutputEventArgs := make([]byte, 0)
+	if this.outputEvent != nil {
+		OutputEventId = this.outputEvent.Id
+		OutputEventName = this.outputEvent.Name
+		OutputEventArgs = this.outputEvent.Args
+	}
+	return CheckPointData{
+		Id:               this.Id,
+		Title:            this.Title,
+		Description:      this.Description,
+		FallbackId:       this.FallbackId,
+		ChildrenId:       ChildrenId,
+		LastBlockToVote:  this.lastBlockToVote,
+		LastBlockToTally: this.lastBlockToTally,
+		OutputEventId:    OutputEventId,
+		OutputEventName:  OutputEventName,
+		OutputEventArgs:  OutputEventArgs,
+	}
+}
+
 /**
 * Function vote
 * Params: tr *Mission, who string, input []byte
 * Returns: recordStatus ExecutionStatus, tallyStatus ExecutionStatus, newChkPStatus ExecutionStatus, fallbackAttempt bool
 * TODO: what if we want to hide the voter's option from validator?
  */
-func (this *CheckPoint) vote(tr *Mission, who string, input []byte) (ExecutionStatus, ExecutionStatus, ExecutionStatus, bool, *event.Event) {
+func (this *CheckPoint) vote(who string, input []byte) (ExecutionStatus, ExecutionStatus, ExecutionStatus, bool, *event.Event) {
 	var recordStatus ExecutionStatus = DIDNOTSTART
 	var tallyStatus ExecutionStatus = DIDNOTSTART
 	var newChkPStatus ExecutionStatus = DIDNOTSTART
 	var ev *event.Event = nil
 	fallbackAttempt := false
 	// check for fallback
-	fallbackAttempt, newChkPStatus, ev = fallback(tr, this.voteMachine, this.FallbackId)
+	fallbackAttempt, newChkPStatus, ev = fallback(this.mission, this.voteMachine, this.FallbackId)
 	if fallbackAttempt == false {
 		if this.voteMachine.Record(who, input) == true {
 			recordStatus = SUCCEED
@@ -182,7 +207,7 @@ func (this *CheckPoint) vote(tr *Mission, who string, input []byte) (ExecutionSt
 		}
 		// then check for tally
 		if fallbackAttempt == false && this.voteMachine.ShouldTally() == true {
-			tallyStatus, newChkPStatus, ev = tally(tr, this.voteMachine)
+			tallyStatus, newChkPStatus, ev = tally(this.mission, this.voteMachine)
 		}
 	}
 	return recordStatus, tallyStatus, newChkPStatus, fallbackAttempt, ev

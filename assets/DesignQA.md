@@ -14,3 +14,8 @@
 4. `When to call log.Fatal and terminate the program?`
 
 - Never?
+
+5. `Should we provide a logging & infra system for devs?`
+
+- Something similar to theGraph; provide dev a system to hook event and save data as developer wish; then they can query the way they want.
+- Question is: should be the default method for dev in Hectagon ecosystem?

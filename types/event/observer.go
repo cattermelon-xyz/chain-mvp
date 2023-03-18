@@ -10,6 +10,8 @@ type Observer interface {
 	Update([]byte)
 	GetId() string
 	SetId(string)
+	Marshal() []byte
+	Unmarshal([]byte)
 }
 
 func (this *eventManagerStruct) DeleteEvent(eventId string) (bool, error) {
