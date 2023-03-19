@@ -1,5 +1,7 @@
 package types
 
+import "github.com/hectagon-finance/chain-mvp/types/event"
+
 /*
 * All neccessary information to reload a Mission
  */
@@ -33,9 +35,7 @@ type CheckPointData struct {
 	ChildrenId       []string
 	LastBlockToVote  uint64
 	LastBlockToTally uint64
-	OutputEventId    string
-	OutputEventName  string
-	OutputEventArgs  []byte
+	OutputEventData  event.EventData
 	VoteMachineType  string
 	VoteMachine      []byte
 }
@@ -62,7 +62,7 @@ func buildMemStateFromSnapshot(s Snapshot) {
 		Missions = append(Missions, m)
 		for _, checkPointData := range s.Data.CheckPointDatas {
 			if checkPointData.Id == string(m.id) {
-				chkp := m.unmarshalCheckPoint(checkPointData)
+				chkp := m.unmarshalFromCheckPointData(checkPointData)
 				CheckPoints = append(CheckPoints, chkp)
 			}
 		}

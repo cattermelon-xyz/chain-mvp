@@ -34,15 +34,17 @@ var cachedMissions = make(map[Address]*Mission)
 
 func GetMissionById(id Address) (*Mission, error) {
 	cached := cachedMissions[id] // cache hit
-	if cached != nil {
+	var err error
+	if cached == nil {
 		for _, m := range Missions {
 			if m.id == id {
 				cachedMissions[id] = m
 				return m, nil
 			}
 		}
+		err = errors.New(string(id) + " not found")
 	}
-	return nil, errors.New(string(id) + " not found")
+	return cached, err
 }
 
 var CheckPoints = make([]*CheckPoint, 0)
@@ -50,20 +52,21 @@ var cachedCheckPoints = make(map[string]*CheckPoint)
 
 func GetCheckPointById(id string) *CheckPoint {
 	cached := cachedCheckPoints[id] // cache hit
-	if cached != nil {
+	if cached == nil {
 		for _, chkp := range CheckPoints {
+			// log.Printf("compare %s and %s", chkp.Id, id)
 			if chkp.Id == id {
 				cachedCheckPoints[id] = chkp
 				return chkp
 			}
 		}
 	}
-	return nil
+	return cached
 }
 
 func CreateMission(title string, fulltext string, b Blockchain) (*Mission, string) {
 	id := utils.RandString(16)
-	i := Mission{
+	mission := Mission{
 		id:          Address(id),
 		Title:       title,
 		Fulltext:    fulltext,
@@ -73,8 +76,8 @@ func CreateMission(title string, fulltext string, b Blockchain) (*Mission, strin
 		isActive:    false,
 		blockchain:  b,
 	}
-	Missions = append(Missions, &i)
-	return &i, id
+	Missions = append(Missions, &mission)
+	return &mission, id
 }
 
 func (mission *Mission) CreateEmptyCheckPoint(title string, desc string, b VotingMachine) *CheckPoint {
@@ -90,10 +93,11 @@ func (mission *Mission) CreateEmptyCheckPoint(title string, desc string, b Votin
 		outputEvent:      nil,
 		mission:          mission,
 	}
+	CheckPoints = append(CheckPoints, &CheckPoint)
 	return &CheckPoint
 }
 func (mission *Mission) CreateCheckPoinWithChildren(name string, desc string, children []*CheckPoint, b VotingMachine, fallbackId uint64, lastBlockToVote uint64, lastBlockToTally uint64) *CheckPoint {
-	c := CheckPoint{
+	CheckPoint := CheckPoint{
 		Id:               utils.RandString(16),
 		Title:            name,
 		Description:      desc,
@@ -105,7 +109,8 @@ func (mission *Mission) CreateCheckPoinWithChildren(name string, desc string, ch
 		outputEvent:      nil,
 		mission:          mission,
 	}
-	return &c
+	CheckPoints = append(CheckPoints, &CheckPoint)
+	return &CheckPoint
 }
 
 func (this *Mission) GetId() Address {
@@ -336,6 +341,6 @@ func (this *Mission) marshal() MissionData {
 	return MissionData{}
 }
 
-func (this *Mission) unmarshalCheckPoint(data CheckPointData) *CheckPoint {
+func (this *Mission) unmarshalFromCheckPointData(data CheckPointData) *CheckPoint {
 	return &CheckPoint{}
 }

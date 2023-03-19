@@ -41,7 +41,7 @@ This project is the MVP for the new chain. These code focus on the application l
 - [x] Vote should not be recorded if fallbackAttempt is TRUE
 - [x] Tally & Fallback should be called when a new block is produced
 - [x] Vote should specify what CheckPoint it is voting, to prevent unintended vote
-- [ ] Fix Mission, CheckPoint usage of pointer to enable marshal and unmarshal
+- [x] Fix Mission, CheckPoint usage of pointer to enable marshal and unmarshal
 - [ ] Turn the program into Blockchain friendly format (command extraction, sync, build memory from Snapshot and build memory from blockdata)
 - [ ] Implement Polling, note that UpVote is just a special case of Polling
 - [ ] Turn program into logic(mem, input) with each `logic` is assigned an `id` that the Event would emit

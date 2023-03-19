@@ -55,6 +55,13 @@ type Event struct {
 	observerList map[string]Observer
 }
 
+type EventData struct {
+	Id               string
+	Name             string
+	Args             []byte
+	ObserverListData map[string][]byte
+}
+
 /**
 * Singleton, return global object
  */
@@ -111,8 +118,18 @@ func (this *eventManagerStruct) CreateEvent(name string, args []byte) (*Event, s
 	return &e, id
 }
 
-func (this *Event) marshal() {
-
+func (this *Event) Marshal() EventData {
+	observerListData := make(map[string][]byte)
+	for oid, o := range this.observerList {
+		observerListData[oid] = o.Marshal()
+	}
+	r := EventData{
+		Id:               this.Id,
+		Name:             this.Name,
+		Args:             this.Args,
+		ObserverListData: observerListData,
+	}
+	return r
 }
 
-func (this *eventManagerStruct) unmarshalEvent() {}
+func (this *eventManagerStruct) UnmarshalFromEventData() {}

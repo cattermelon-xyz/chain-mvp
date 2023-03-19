@@ -54,7 +54,7 @@ func (n *CheckPoint) Children() (c []tree.Node) {
 * When this node start(), an event will be emitted.
  */
 func (mission *Mission) CreateOutput(name string, desc string, ev *event.Event) *CheckPoint {
-	c := CheckPoint{
+	leaf := CheckPoint{
 		Id:               utils.RandString(16),
 		Title:            name,
 		Description:      desc,
@@ -66,13 +66,19 @@ func (mission *Mission) CreateOutput(name string, desc string, ev *event.Event) 
 		outputEvent:      ev,
 		mission:          mission,
 	}
-	return &c
+	CheckPoints = append(CheckPoints, &leaf)
+	return &leaf
 }
 func (this *CheckPoint) Attach(childId string) *CheckPoint {
 	child := GetCheckPointById(childId)
+	if child == nil {
+		log.Printf("func (this *CheckPoint) Attach: %s not found\n", childId)
+		return nil
+	}
 	if this.children == nil {
 		this.children = make([]*CheckPoint, 0)
 	}
+	// log.Println("child: " + child.Id + "; this: " + this.Id)
 	if this.mission != child.mission {
 		log.Println("Mismatch mission id")
 		return nil
@@ -112,7 +118,6 @@ func (this *CheckPoint) GetOutputEvent() *event.Event {
  */
 func (this *CheckPoint) start(lastTalliedResult []byte) (CheckPointStartedStatus, *event.Event) {
 	// an Output or a CheckPoint with votingMachine?
-	log.Printf("%s\n", this.Title)
 	if this.outputEvent != nil {
 		return ChkPIsAnOutput, this.outputEvent
 	} else { // a CheckPoint with votingMachine
@@ -121,7 +126,7 @@ func (this *CheckPoint) start(lastTalliedResult []byte) (CheckPointStartedStatus
 			return ChkPFailToStart, nil
 		}
 		if len(this.children) == 0 || this.FallbackId == NoFallbackOption {
-			log.Printf("func (this *CheckPoint) start([]byte): len(this.children) == 0 or this.FallbackId == NoFallbackOption\n")
+			// log.Printf("func (this *CheckPoint) start([]byte): len(this.children) == 0 or this.FallbackId == NoFallbackOption\n")
 			return ChkPFailToStart, nil
 		}
 	}
@@ -142,20 +147,6 @@ func (this *CheckPoint) isValidChoice(option []byte) bool {
 	return this.voteMachine.ValidateVote(option)
 }
 
-/*
-Id               string
-Title            string
-Description      string
-FallbackId       uint64
-ChildrenId       []string
-LastBlockToVote  uint64
-LastBlockToTally uint64
-OutputEventId    string
-OutputEventName  string
-OutputEventArgs  []byte
-VoteMachineType  string
-VoteMachine      []byte
-*/
 func (this *CheckPoint) marshal() CheckPointData {
 	ChildrenId := make([]string, 0)
 	if this.children != nil {
@@ -163,13 +154,9 @@ func (this *CheckPoint) marshal() CheckPointData {
 			ChildrenId = append(ChildrenId, chkp.Id)
 		}
 	}
-	OutputEventId := ""
-	OutputEventName := ""
-	OutputEventArgs := make([]byte, 0)
+	ed := event.EventData{}
 	if this.outputEvent != nil {
-		OutputEventId = this.outputEvent.Id
-		OutputEventName = this.outputEvent.Name
-		OutputEventArgs = this.outputEvent.Args
+		ed = this.outputEvent.Marshal()
 	}
 	return CheckPointData{
 		Id:               this.Id,
@@ -179,9 +166,7 @@ func (this *CheckPoint) marshal() CheckPointData {
 		ChildrenId:       ChildrenId,
 		LastBlockToVote:  this.lastBlockToVote,
 		LastBlockToTally: this.lastBlockToTally,
-		OutputEventId:    OutputEventId,
-		OutputEventName:  OutputEventName,
-		OutputEventArgs:  OutputEventArgs,
+		OutputEventData:  ed,
 	}
 }
 

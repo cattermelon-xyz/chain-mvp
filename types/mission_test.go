@@ -83,7 +83,6 @@ func TestMissionVoteOnRecord(t *testing.T) {
 	assert.Equal(t, newNodeState, types.DIDNOTSTART, "NewNode must be DIDNOTSTART")
 	assert.Equal(t, fallbackAttemp, false, "fallbackAtempt must be false")
 	// vote failed to record: invalid choice
-	ev.Clear()
 	machine = MockVoteMachine{
 		Started:          true,
 		VoteValid:        false,
@@ -93,6 +92,7 @@ func TestMissionVoteOnRecord(t *testing.T) {
 	missionB, _ := types.CreateMission("missionB", "desc", blkc)
 	chkP = missionB.CreateCheckPoinWithChildren("[ChkP] test name", "[ChkP] test desc",
 		[]*types.CheckPoint{{}}, &machine, 2, uint64(1000), uint64(1000))
+	missionB.SetStartChkP(chkP.Id)
 	missionB.Start()
 	assert.Equal(t, ev.UnQueue(), event.MissionStarted, "Mission should Started")
 	recordState, _, _, _, _ = missionB.Vote([]byte{0}, "x", chkP.Id)

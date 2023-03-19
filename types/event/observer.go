@@ -6,12 +6,13 @@ import (
 	"github.com/hectagon-finance/chain-mvp/third_party/utils"
 )
 
+// One Observer can Register to only ONE event (through SetId)
 type Observer interface {
 	Update([]byte)
 	GetId() string
 	SetId(string)
 	Marshal() []byte
-	Unmarshal([]byte)
+	Unmarshal(oId string, data []byte)
 }
 
 func (this *eventManagerStruct) DeleteEvent(eventId string) (bool, error) {
