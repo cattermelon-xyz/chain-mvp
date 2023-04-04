@@ -337,10 +337,28 @@ func (this *Mission) Reveal(priK []byte) {
 * Marshal the Mission data
  */
 func (this *Mission) marshal() MissionData {
-	// go through the tree to take all checkpoint
-	return MissionData{}
+	var StartChkPId, CurrentChkPId string
+	if this.startChkP != nil {
+		StartChkPId = this.startChkP.Id
+	}
+	if this.currentChkP != nil {
+		CurrentChkPId = this.currentChkP.Id
+	}
+	return MissionData{
+		Id:            string(this.id),
+		Title:         this.Title,
+		Fulltext:      this.Fulltext,
+		Owner:         string(this.Owner),
+		StartChkPId:   StartChkPId,
+		CurrentChkPId: CurrentChkPId,
+		IsStarted:     this.isStarted,
+		IsActive:      this.isActive,
+	}
 }
 
+/**
+* unmarshal a CheckPoint from CheckPointData without attaching children
+ */
 func (this *Mission) unmarshalFromCheckPointData(data CheckPointData) *CheckPoint {
 	return &CheckPoint{}
 }

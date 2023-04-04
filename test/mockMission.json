@@ -1,0 +1,45 @@
+{
+  "name" : "such a tree",
+  "start": "a",
+  "nodes": [
+    {
+      "id": "a"
+    },
+    {
+      "id": "a1",
+      "parent": "a"
+    },
+    {
+      "id": "b",
+      "parent": "a"
+    },
+    {
+      "id": "c",
+      "parent": "a"
+    },
+    {
+      "id" : "d",
+      "parent" : "b"
+    },
+    {
+      "id" : "e",
+      "parent" : "b"
+    },
+    {
+      "id" : "f",
+      "parent" : "c"
+    },
+    {
+      "id" : "g",
+      "parent" : "d"
+    },
+    {
+      "id" : "h",
+      "parent" : "d"
+    },
+    {
+      "id" : "k",
+      "parent" : "d"
+    }
+  ]
+}

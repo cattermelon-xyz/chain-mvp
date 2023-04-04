@@ -56,3 +56,6 @@ This project is the MVP for the new chain. These code focus on the application l
 - [ ] Implement server api call to match with all client call
 - [ ] Integrate Web UI
 - [ ] Website support MetaMask and Phantom to use ETH, BSC, Solana address to interact with the chain
+- [ ] Format for a proposal: description {context, motivation, proposed action}, options [{option, description}]
+- [ ] Discorse plugin
+- [ ] If a mission is stopped, it is possible to append new step and continue to vote

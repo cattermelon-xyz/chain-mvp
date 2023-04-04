@@ -16,11 +16,8 @@ const (
 )
 
 type CreateMissionCommandData struct {
-	ChkPs       []CheckPoint
-	StartChkPId string
-	Title       string
-	Fulltext    string
-	Owner       Address
+	ChkPs   []CheckPointData
+	Mission MissionData
 }
 
 type StartMissionCommandData struct {

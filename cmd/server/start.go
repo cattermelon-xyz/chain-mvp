@@ -90,9 +90,24 @@ func startListen(port int16) {
 		clients[ws] = true
 		log.Println("A client is registered")
 	})
+
+	r.POST("/mission", func(c *gin.Context) {
+		// ev := event.GetEventManager()
+		var missionData types.MissionData
+		if err := c.ShouldBindJSON(&missionData); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		// Create a new mission
+	})
 	// Set up CORS middleware
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
 	r.Use(cors.New(config))
 	r.Run(":" + strconv.Itoa(int(port)))
 }
+
+// generate a code to build a tree struct from a json file
+// Path: cmd/server/start.go
+// Compare this snippet from cmd/client/checkpoint_new.go:
+// /*

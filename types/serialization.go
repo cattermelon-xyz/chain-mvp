@@ -20,7 +20,7 @@ type MissionData struct {
 /**
 * Resurrect the data back to memory
  */
-func (this *MissionData) unmarshal() *Mission {
+func (this *MissionData) Unmarshal() *Mission {
 	return &Mission{}
 }
 
